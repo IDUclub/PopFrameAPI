@@ -1,6 +1,9 @@
 import asyncio
+import json
+import pickle
 from typing import Literal
 
+import requests
 import aiohttp
 import numpy as np
 import geopandas as gpd
@@ -91,7 +94,7 @@ class PopFrameModelApiService:
                         session=session,
                         endpoint_url=f"/api/v1/territory/{ter_id}/indicator_values",
                         params={
-                            "indicator_value": 1
+                            "indicator_ids": 1
                         }
                     ) for ter_id in current_ids
                 ]
@@ -158,6 +161,36 @@ class PopFrameModelApiService:
                 _detail={}
             )
         return adj_mx
+
+
+    #ToDo Rewrite to api handler
+    @staticmethod
+    async def get_tf_cities(region_id: int) -> gpd.GeoDataFrame:
+        """
+        Function retrieves cities for region in matrix
+        Args:
+            region_id (int): region id
+        Returns:
+            gpd.GeoDataFrame: gdf with territories
+        Raises:
+            404, not found, got empty matrix
+            500, internal error, matrix parsing fails
+        """
+
+        response = requests.get(
+            url=f"{transportframe_api_handler.base_url}/{region_id}/get_towns",
+        )
+        if response.status_code != 200:
+            tmp = json.loads(response.text)
+            raise http_exception(
+                response.status_code,
+                msg=f"error during cities parsing",
+                _input=response.request.url,
+                _detail=tmp if tmp is not dict and "detail" not in tmp else tmp["detail"]
+            )
+
+        towns_gdf = pickle.loads(response.content)
+        return towns_gdf
 
     # ToDo Rewrite to hash object
     @staticmethod

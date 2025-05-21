@@ -9,7 +9,6 @@ from popframe.method.popuation_frame import PopulationFrame
 from popframe.preprocessing.level_filler import LevelFiller
 from popframe.models.region import Region
 from app.dependences import (
-    urban_api_handler,
     http_exception, geoserver_storage,
 )
 
@@ -73,29 +72,33 @@ class PopFrameModelsService:
         logger.info(f"Started model calculation for the region {region_id}")
         region_borders = await pop_frame_model_api_service.get_region_borders(region_id)
         logger.info(f"Extracted region border for the region {region_id}")
-        cities = await urban_api_handler.get(
-            endpoint_url="/api/v1/all_territories",
-            params={
-                "parent_id": region_id,
-                "get_all_levels": "true",
-                "cities_only": "true",
-                "centers_only": "true",
-            },
-        )
-        if len(cities["features"]) < 1:
-            logger.info(f"No cities found for region {region_id}")
-        cities_gdf = gpd.GeoDataFrame.from_features(cities, crs=4326)
+        #ToDo revise cities after broker
+        cities_gdf = await pop_frame_model_api_service.get_tf_cities(region_id)
+        # cities = await urban_api_handler.get(
+        #     endpoint_url="/api/v1/all_territories",
+        #     params={
+        #         "parent_id": region_id,
+        #         "get_all_levels": "true",
+        #         "cities_only": "true",
+        #         "centers_only": "true",
+        #     },
+        # )
+        # if len(cities< 1):
+        #     logger.info(f"No cities found for region {region_id}")
+        # cities_gdf = gpd.GeoDataFrame.from_features(cities, crs=4326)
         logger.info(f"Started population retrieval for region {region_id}")
         population_data_df = await pop_frame_model_api_service.get_territories_population(
-            territories_ids=cities_gdf["territory_id"].to_list(),
+            territories_ids=cities_gdf.index.to_list(),
         )
+        population_data_df.set_index("territory_id", inplace=True)
         logger.info(f"Successfully retrieved population data for region {region_id}")
         cities_gdf = pd.merge(
             cities_gdf,
             population_data_df,
-            on="territory_id"
-        ).reset_index(drop=True)
-        cities_gdf.set_index("territory_id", inplace=True)
+            left_index=True,
+            right_index=True
+        )
+        # cities_gdf.set_index("territory_id", inplace=True)
         cities_gdf = gpd.GeoDataFrame(cities_gdf, geometry="geometry", crs=4326)
         level_filler = LevelFiller(towns=cities_gdf)
         towns = level_filler.fill_levels()
