@@ -1,18 +1,20 @@
 import sys
 
 import geopandas as gpd
+import pandas as pd
 import requests
 from fastapi import (APIRouter, BackgroundTasks, Depends, Header,
                      HTTPException, Query, Request)
 from loguru import logger
 from popframe.method.territory_evaluation import TerritoryEvaluation
+from popframe.method.city_evaluation import CityPopulationScorer
 from pydantic_geojson import PolygonModel
 
 from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
     PopFrameAPIModel
-from app.dependences import config
+from app.dependencies import config, urban_api_gateway
 from app.models.models import PopulationCriterionResult
 from app.utils.auth import verify_token
 
@@ -50,32 +52,29 @@ async def get_population_criterion_score_endpoint(
     geojson_data: dict,
     popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
 ):
+    if geojson_data.get("type") != "FeatureCollection":
+        raise HTTPException(status_code=400, detail="Неверный формат GeoJSON, ожидался FeatureCollection")
+
     try:
-        if popframe_region_model.region_id in []:
-
-            region_mo =
-            evaluation =
-        else:
-            evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
-
-        if geojson_data.get("type") != "FeatureCollection":
-            raise HTTPException(status_code=400, detail="Неверный формат GeoJSON, ожидался FeatureCollection")
-
         polygon_gdf = gpd.GeoDataFrame.from_features(geojson_data["features"], crs=4326)
         polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
+        if popframe_region_model.region_id in [3138, 3268, 16141]:
+            region_mo = await urban_api_gateway.get_mo_for_fed_city_with_population(popframe_region_model.region_id)
+            scorer = CityPopulationScorer(region_mo, polygon_gdf)
+            return pd.DataFrame(scorer.run())["score"].tolist()
+        else:
+            evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
+            scores = []
+            result = evaluation.population_criterion(territories_gdf=polygon_gdf)
+            if result:
+                for res in result:
+                    scores.append(float(res['score']))
+                return scores
 
-        scores = []
-        result = evaluation.population_criterion(territories_gdf=polygon_gdf)
-
-        if result:
-            for res in result:
-                scores.append(float(res['score']))
-            return scores
-
-        raise HTTPException(status_code=404, detail="Результаты не найдены")
+            raise HTTPException(status_code=404, detail="Результаты не найдены")
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 async def process_population_criterion(
     popframe_region_model: PopFrameAPIModel,

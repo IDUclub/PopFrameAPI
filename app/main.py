@@ -13,7 +13,7 @@ from app.routers import (router_agglomeration, router_frame, router_landuse,
 from app.routers.router_popframe_models import model_calculator_router
 
 from .common.exceptions.http_exception_wrapper import http_exception
-from .dependences import config
+from .dependencies import config
 
 logger.remove()
 log_level = "DEBUG"

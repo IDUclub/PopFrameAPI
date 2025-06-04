@@ -10,7 +10,7 @@ from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
     PopFrameAPIModel
-from app.dependences import config
+from app.dependencies import config
 from app.utils.auth import verify_token
 
 popframe_router = APIRouter(prefix="/popframe", tags=["PopFrame Evaluation"])

@@ -10,7 +10,7 @@ from popframe.preprocessing.level_filler import LevelFiller
 
 from app.common.storage.models.pop_frame_caching_service import \
     pop_frame_caching_service
-from app.dependences import geoserver_storage, http_exception
+from app.dependencies import geoserver_storage, http_exception
 
 from .popoframe_dtype.popframe_api_model import PopFrameAPIModel
 from .services.popframe_models_api_service import pop_frame_model_api_service

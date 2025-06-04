@@ -4,7 +4,7 @@ from pathlib import Path
 from loguru import logger
 from popframe.models.region import Region
 
-from app.dependences import config, http_exception
+from app.dependencies import config, http_exception
 
 from .caching_serivce import CachingService
 
