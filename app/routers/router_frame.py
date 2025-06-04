@@ -2,22 +2,22 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 import json
 from popframe.method.popuation_frame import PopulationFrame
 from popframe.method.aglomeration import AgglomerationBuilder
-from popframe.models.region import Region
 from typing import Any, Dict
 
 from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import PopFrameAPIModel
 
 network_router = APIRouter(prefix="/population", tags=["Population Frame"])
 
 
 @network_router.get("/build_city_frame", response_model=Dict[str, Any])
 async def build_circle_frame_endpoint(
-    region_model: Region = Depends(
+    popframe_region_model: PopFrameAPIModel = Depends(
         pop_frame_model_service.get_model
     )
 ):
     try:
-        frame_method = PopulationFrame(region=region_model)
+        frame_method = PopulationFrame(region=popframe_region_model.region_model)
         gdf_frame = frame_method.build_circle_frame()
         return json.loads(gdf_frame.to_json())
     except Exception as e:
@@ -26,13 +26,13 @@ async def build_circle_frame_endpoint(
 
 @network_router.get("/build_agglomeration_frames", response_model=Dict[str, Any])
 def build_agglomeration_frames(
-        region_model: Region = Depends(pop_frame_model_service.get_model),
+        popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
 ):
     try:
-        frame_method = PopulationFrame(region=region_model)
+        frame_method = PopulationFrame(region=popframe_region_model.region_model)
         gdf_frame = frame_method.build_circle_frame()
 
-        builder = AgglomerationBuilder(region=region_model)
+        builder = AgglomerationBuilder(region=popframe_region_model.region_model)
         agglomeration_gdf = builder.get_agglomerations()
         towns_with_status = builder.evaluate_city_agglomeration_status(gdf_frame, agglomeration_gdf)
 

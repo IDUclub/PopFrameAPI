@@ -3,7 +3,6 @@ import geopandas as gpd
 from pydantic_geojson import PolygonModel
 import requests
 from popframe.method.territory_evaluation import TerritoryEvaluation
-from popframe.models.region import Region
 
 from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
 from app.models.models import EvaluateTerritoryLocationResult
@@ -11,6 +10,8 @@ from loguru import logger
 import sys
 from app.utils.auth import verify_token
 from app.dependences import config
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import PopFrameAPIModel
+
 
 territory_router = APIRouter(prefix="/territory", tags=["Territory Evaluation"])
 
@@ -25,19 +26,19 @@ logger.add(
 @territory_router.post("/evaluate_location_test", response_model=list[EvaluateTerritoryLocationResult])
 async def evaluate_territory_location_endpoint(
     polygon: PolygonModel,
-    region_model: Region = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
     project_scenario_id: int | None = Query(None, description="ID сценария проекта, если имеется"),
     token: str = Depends(verify_token)  # Добавляем токен для аутентификации
 ):
     try:
-        evaluation = TerritoryEvaluation(region=region_model)
+        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
         polygon_feature = {
             'type': 'Feature',
             'geometry': polygon.model_dump(),
             'properties': {}
         }
         polygon_gdf = gpd.GeoDataFrame.from_features([polygon_feature], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(region_model.crs)
+        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
         result = evaluation.evaluate_territory_location(territories_gdf=polygon_gdf)
         return result
     except Exception as e:
@@ -45,7 +46,7 @@ async def evaluate_territory_location_endpoint(
 
 
 async def process_evaluation(
-    region_model: Region,
+    popframe_region_model: PopFrameAPIModel,
     project_scenario_id: int,
     token: str
 ):
@@ -82,10 +83,10 @@ async def process_evaluation(
             'properties': {}
         }
         polygon_gdf = gpd.GeoDataFrame.from_features([territory_feature], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(region_model.crs)
+        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
 
         # Territory evaluation
-        evaluation = TerritoryEvaluation(region=region_model)
+        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
         result = evaluation.evaluate_territory_location(territories_gdf=polygon_gdf)
 
         # Saving the evaluation to the database
@@ -124,11 +125,11 @@ async def process_evaluation(
 @territory_router.post("/save_evaluate_location")
 async def save_evaluate_location_endpoint(
     background_tasks: BackgroundTasks,
-    region_model: Region = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
     project_scenario_id: int | None = Query(None, description="Project scenario ID, if available"),
     token: str = Depends(verify_token)  # Добавляем токен для аутентификации
     ):
     # Добавляем фоновую задачу
-    background_tasks.add_task(process_evaluation, region_model, project_scenario_id, token)
+    background_tasks.add_task(process_evaluation, popframe_region_model, project_scenario_id, token)
 
     return {"message": "Population criterion processing started", "status": "processing"}

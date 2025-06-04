@@ -14,6 +14,7 @@ from app.dependences import (
 
 from app.common.storage.models.pop_frame_caching_service import pop_frame_caching_service
 from .services.popframe_models_api_service import pop_frame_model_api_service
+from .popoframe_dtype.popframe_api_model import PopFrameAPIModel
 
 
 class PopFrameModelsService:
@@ -185,20 +186,19 @@ class PopFrameModelsService:
     async def get_model(
             self,
             region_id: int,
-    ) -> Region:
+    ) -> PopFrameAPIModel:
         """
         Function gets model for region
         Args:
             region_id (int): region id
         Returns:
-            Region: PopFrame regional model
+            PopFrameAPIModel: PopFrameAPIModel model for region
         """
 
-        if await pop_frame_caching_service.check_path(region_id=region_id):
-            model = await pop_frame_caching_service.load_cached_model(region_id=region_id)
-            return model
-        await self.calculate_model(region_id=region_id)
-        return await self.get_model(region_id=region_id)
+        if not await pop_frame_caching_service.check_path(region_id=region_id):
+            await self.calculate_model(region_id=region_id)
+        model = await pop_frame_caching_service.load_cached_model(region_id=region_id)
+        return PopFrameAPIModel(region_id, model)
 
     @staticmethod
     async def get_available_regions() -> list[int]:

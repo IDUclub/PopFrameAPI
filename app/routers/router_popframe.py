@@ -3,13 +3,12 @@ import geopandas as gpd
 import requests
 from popframe.method.territory_evaluation import TerritoryEvaluation
 
-from popframe.models.region import Region
-
 from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
 from loguru import logger
 import sys
 from app.dependences import config
 from app.utils.auth import verify_token
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import PopFrameAPIModel
 
 
 popframe_router = APIRouter(prefix="/popframe", tags=["PopFrame Evaluation"])
@@ -24,7 +23,7 @@ logger.add(
 
 
 async def process_combined_evaluation(
-    region_model: Region,
+    popframe_region_model: PopFrameAPIModel,
     project_scenario_id: int,
     token: str
 ):
@@ -57,10 +56,10 @@ async def process_combined_evaluation(
             'properties': {}
         }
         polygon_gdf = gpd.GeoDataFrame.from_features([territory_feature], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(region_model.crs)
+        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
 
         # Оценка территории
-        evaluation = TerritoryEvaluation(region=region_model)
+        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
 
         # Выполнение первой оценки
         location_results = evaluation.evaluate_territory_location(territories_gdf=polygon_gdf)
@@ -126,11 +125,11 @@ async def process_combined_evaluation(
 @popframe_router.put("/save_popframe_evaluation")
 async def save_popframe_evaluation_endpoint(
     background_tasks: BackgroundTasks,
-    region_model: Region = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
     project_scenario_id: int | None = Query(None, description="ID сценария проекта, если имеется"),
     token: str = Depends(verify_token)
 ):
     # Добавляем фоновую задачу для комбинированной обработки
-    background_tasks.add_task(process_combined_evaluation, region_model, project_scenario_id, token)
+    background_tasks.add_task(process_combined_evaluation, popframe_region_model, project_scenario_id, token)
 
     return {"message": "PopFrame evaluation processing started", "status": "processing"}

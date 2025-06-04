@@ -3,18 +3,20 @@ import json
 import geopandas as gpd
 from typing import Any, Dict
 from popframe.method.landuse_assessment import LandUseAssessment
-from popframe.models.region import Region
 from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
 from app.dependences import config
 from app.utils.auth import verify_token
 import requests
+
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import PopFrameAPIModel
+
 
 landuse_router = APIRouter(prefix="/landuse", tags=["Landuse data"])
 
 # Land Use Data Endpoints
 @landuse_router.post("/get_landuse_data", response_model=Dict[str, Any])
 async def get_landuse_data_endpoint(
-    region_model: Region = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
     project_scenario_id: int | None = Query(None, description="ID сценария cценария"),
     token: str = Depends(verify_token)
     ):
@@ -50,7 +52,7 @@ async def get_landuse_data_endpoint(
             'geometry': territory_geometry,
             'properties': {}
         }
-        urbanisation = LandUseAssessment(region=region_model)
+        urbanisation = LandUseAssessment(region=popframe_region_model.region_model)
         polygon_gdf = gpd.GeoDataFrame.from_features([territory_feature], crs=4326)
         landuse_data = urbanisation.get_landuse_data(territories=polygon_gdf)
         return json.loads(landuse_data.to_json())
