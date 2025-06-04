@@ -7,8 +7,8 @@ from app.common.exceptions.http_exception_wrapper import http_exception
 class APIHandler:
 
     def __init__(
-            self,
-            base_url: str,
+        self,
+        base_url: str,
     ) -> None:
         """Initialisation function
 
@@ -22,7 +22,7 @@ class APIHandler:
 
     @staticmethod
     async def _check_response_status(
-            response: aiohttp.ClientResponse
+        response: aiohttp.ClientResponse,
     ) -> list | dict | None:
         """Function handles response
 
@@ -62,11 +62,11 @@ class APIHandler:
             raise exception
 
     async def get(
-            self,
-            endpoint_url: str,
-            headers: dict | None = None,
-            params: dict | None = None,
-            session: aiohttp.ClientSession | None = None,
+        self,
+        endpoint_url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+        session: aiohttp.ClientSession | None = None,
     ) -> dict | list:
         """Function to get data from api
 
@@ -81,21 +81,17 @@ class APIHandler:
 
         if not session:
             async with aiohttp.ClientSession() as session:
-                return await  self.get(
+                return await self.get(
                     endpoint_url=endpoint_url,
                     headers=headers,
                     params=params,
                     session=session,
                 )
         url = self.base_url + endpoint_url
-        async with session.get(
-                url=url,
-                headers=headers,
-                params=params
-        ) as response:
+        async with session.get(url=url, headers=headers, params=params) as response:
             result = await self._check_response_status(response)
             if result is None:
-                return await  self.get(
+                return await self.get(
                     endpoint_url=endpoint_url,
                     headers=headers,
                     params=params,
@@ -104,13 +100,13 @@ class APIHandler:
             return result
 
     async def post(
-            self,
-            endpoint_url: str,
-            headers: dict | None = None,
-            params: dict | None = None,
-            data: dict | None = None,
-            session: aiohttp.ClientSession | None = None,
-        ) -> dict | list:
+        self,
+        endpoint_url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+        data: dict | None = None,
+        session: aiohttp.ClientSession | None = None,
+    ) -> dict | list:
         """Function to post data from api
 
         Args:
@@ -141,7 +137,7 @@ class APIHandler:
         ) as response:
             result = await self._check_response_status(response)
             if result is None:
-                return await  self.post(
+                return await self.post(
                     endpoint_url=endpoint_url,
                     headers=headers,
                     params=params,
@@ -150,12 +146,12 @@ class APIHandler:
             return result
 
     async def put(
-            self,
-            endpoint_url: str,
-            headers: dict | None = None,
-            params: dict | None = None,
-            data: dict | None = None,
-            session: aiohttp.ClientSession | None = None,
+        self,
+        endpoint_url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+        data: dict | None = None,
+        session: aiohttp.ClientSession | None = None,
     ) -> dict | list:
         """Function to post data from api
 
@@ -180,14 +176,14 @@ class APIHandler:
                 )
         url = self.base_url + endpoint_url
         async with session.put(
-                url=url,
-                headers=headers,
-                params=params,
-                json=data,
+            url=url,
+            headers=headers,
+            params=params,
+            json=data,
         ) as response:
             result = await self._check_response_status(response)
             if result is None:
-                return await  self.put(
+                return await self.put(
                     endpoint_url=endpoint_url,
                     headers=headers,
                     params=params,
@@ -196,12 +192,12 @@ class APIHandler:
             return result
 
     async def delete(
-            self,
-            endpoint_url: str,
-            headers: dict | None = None,
-            params: dict | None = None,
-            data: dict | None = None,
-            session: aiohttp.ClientSession | None = None,
+        self,
+        endpoint_url: str,
+        headers: dict | None = None,
+        params: dict | None = None,
+        data: dict | None = None,
+        session: aiohttp.ClientSession | None = None,
     ) -> dict | list:
         """Function to post data from api
 
@@ -226,14 +222,14 @@ class APIHandler:
                 )
         url = self.base_url + endpoint_url
         async with session.delete(
-                url=url,
-                headers=headers,
-                params=params,
-                data=data,
+            url=url,
+            headers=headers,
+            params=params,
+            data=data,
         ) as response:
             result = await self._check_response_status(response)
             if result is None:
-                return await  self.delete(
+                return await self.delete(
                     endpoint_url=endpoint_url,
                     headers=headers,
                     params=params,
