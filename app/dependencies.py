@@ -3,8 +3,8 @@ from pathlib import Path
 from iduconfig import Config
 
 from app.common.api_handler.api_handler import APIHandler
-from app.common.gateways.urban_api_gateway import UrbanAPIGateway
 from app.common.exceptions.http_exception_wrapper import http_exception
+from app.common.gateways.urban_api_gateway import UrbanAPIGateway
 from app.common.storage.geoserver.goserver import GeoserverStorage
 
 config = Config()
