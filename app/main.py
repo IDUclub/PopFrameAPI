@@ -2,27 +2,45 @@ import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 from loguru import logger
 
-from app.routers import router_territory, router_population, router_frame, router_agglomeration, router_popframe
-from app.routers import router_landuse
+from app.common.models.popframe_models.popframe_models_service import \
+    pop_frame_model_service
+from app.routers import (router_agglomeration, router_frame, router_landuse,
+                         router_popframe, router_population, router_territory)
 from app.routers.router_popframe_models import model_calculator_router
-from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
+
 from .common.exceptions.http_exception_wrapper import http_exception
-from .dependences import config
+from .dependencies import config
 
 logger.remove()
 log_level = "DEBUG"
 log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <yellow>Line {line: >4} ({file}):</yellow> <b>{message}</b>"
-logger.add(sys.stderr, level=log_level, format=log_format, colorize=True, backtrace=True, diagnose=True)
-logger.add(config.get("LOGS_FILE"), level=log_level, format=log_format, colorize=False, backtrace=True, diagnose=True)
+logger.add(
+    sys.stderr,
+    level=log_level,
+    format=log_format,
+    colorize=True,
+    backtrace=True,
+    diagnose=True,
+)
+logger.add(
+    config.get("LOGS_FILE"),
+    level=log_level,
+    format=log_format,
+    colorize=False,
+    backtrace=True,
+    diagnose=True,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await pop_frame_model_service.load_and_cache_all_models_on_startup()
     yield
+
 
 app = FastAPI(
     lifespan=lifespan,
@@ -40,10 +58,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Root endpoint
 @app.get("/", response_model=dict[str, str])
 def read_root():
-    return RedirectResponse(url='/docs')
+    return RedirectResponse(url="/docs")
+
 
 @app.get("/logs")
 async def get_logs():
@@ -54,7 +74,7 @@ async def get_logs():
     try:
         return FileResponse(
             f"{config.get('LOG_FILE')}.log",
-            media_type='application/octet-stream',
+            media_type="application/octet-stream",
             filename=f"{config.get('LOG_FILE')}.log",
         )
     except FileNotFoundError as e:
@@ -62,14 +82,14 @@ async def get_logs():
             status_code=404,
             msg="Log file not found",
             _input={"lof_file_name": f"{config.get('LOG_FILE')}.log"},
-            _detail={"error": e.__str__()}
+            _detail={"error": e.__str__()},
         )
     except Exception as e:
         raise http_exception(
             status_code=500,
             msg="Internal server error during reading logs",
             _input={"lof_file_name": f"{config.get('LOG_FILE')}.log"},
-            _detail={"error": e.__str__()}
+            _detail={"error": e.__str__()},
         )
 
 

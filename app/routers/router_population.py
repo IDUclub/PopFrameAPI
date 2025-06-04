@@ -1,14 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header, BackgroundTasks, Request
-import requests
-import geopandas as gpd
-from pydantic_geojson import PolygonModel
-from loguru import logger
 import sys
-from popframe.method.territory_evaluation import TerritoryEvaluation
-from popframe.models.region import Region
 
-from app.dependences import config
-from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
+import geopandas as gpd
+import pandas as pd
+import requests
+from fastapi import (APIRouter, BackgroundTasks, Depends, Header,
+                     HTTPException, Query, Request)
+from loguru import logger
+from popframe.method.territory_evaluation import TerritoryEvaluation
+from popframe.method.city_evaluation import CityPopulationScorer
+from pydantic_geojson import PolygonModel
+
+from app.common.models.popframe_models.popframe_models_service import \
+    pop_frame_model_service
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
+    PopFrameAPIModel
+from app.dependencies import config, urban_api_gateway
 from app.models.models import PopulationCriterionResult
 from app.utils.auth import verify_token
 
@@ -26,16 +32,16 @@ logger.add(
 @population_router.post("/test_population_criterion", response_model=list[PopulationCriterionResult])
 async def test_population_criterion_endpoint(
         polygon: PolygonModel,
-        region_model: Region = Depends(pop_frame_model_service.get_model), token: str = Depends(verify_token)):
+        popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model), token: str = Depends(verify_token)):
     try:
-        evaluation = TerritoryEvaluation(region=region_model)
+        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
         polygon_feature = {
             'type': 'Feature',
             'geometry': polygon.model_dump(),
             'properties': {}
         }
         polygon_gdf = gpd.GeoDataFrame.from_features([polygon_feature], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(region_model.crs)
+        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
         result = evaluation.population_criterion(territories_gdf=polygon_gdf)
         return result
     except Exception as e:
@@ -44,32 +50,34 @@ async def test_population_criterion_endpoint(
 @population_router.post("/get_population_criterion_score", response_model=list[float])
 async def get_population_criterion_score_endpoint(
     geojson_data: dict,
-    region_model: Region = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
 ):
+    if geojson_data.get("type") != "FeatureCollection":
+        raise HTTPException(status_code=400, detail="Неверный формат GeoJSON, ожидался FeatureCollection")
+
     try:
-        evaluation = TerritoryEvaluation(region=region_model)
-
-        if geojson_data.get("type") != "FeatureCollection":
-            raise HTTPException(status_code=400, detail="Неверный формат GeoJSON, ожидался FeatureCollection")
-
         polygon_gdf = gpd.GeoDataFrame.from_features(geojson_data["features"], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(region_model.crs)
+        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
+        if popframe_region_model.region_id in [3138, 3268, 16141]:
+            region_mo = await urban_api_gateway.get_mo_for_fed_city_with_population(popframe_region_model.region_id)
+            scorer = CityPopulationScorer(region_mo, polygon_gdf)
+            return pd.DataFrame(scorer.run())["score"].tolist()
+        else:
+            evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
+            scores = []
+            result = evaluation.population_criterion(territories_gdf=polygon_gdf)
+            if result:
+                for res in result:
+                    scores.append(float(res['score']))
+                return scores
 
-        scores = []
-        result = evaluation.population_criterion(territories_gdf=polygon_gdf)
-
-        if result:
-            for res in result:
-                scores.append(float(res['score']))
-            return scores
-
-        raise HTTPException(status_code=404, detail="Результаты не найдены")
+            raise HTTPException(status_code=404, detail="Результаты не найдены")
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 async def process_population_criterion(
-    region_model: Region,
+    popframe_region_model: PopFrameAPIModel,
     project_scenario_id: int,
     token: str
 ):
@@ -101,9 +109,9 @@ async def process_population_criterion(
             'properties': {}
         }
         polygon_gdf = gpd.GeoDataFrame.from_features([territory_feature], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(region_model.crs)
+        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
 
-        evaluation = TerritoryEvaluation(region=region_model)
+        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
         result = evaluation.population_criterion(territories_gdf=polygon_gdf)
 
         for res in result:
@@ -133,11 +141,11 @@ async def process_population_criterion(
 @population_router.post("/save_population_criterion")
 async def save_population_criterion_endpoint(
     background_tasks: BackgroundTasks,
-    region_model: Region = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
     project_scenario_id: int | None = Query(None, description="ID сценария проекта, если имеется"),
     token: str = Depends(verify_token)
     ):
 
-    background_tasks.add_task(process_population_criterion, region_model, project_scenario_id, token)
+    background_tasks.add_task(process_population_criterion, popframe_region_model, project_scenario_id, token)
 
     return {"message": "Population criterion processing started", "status": "processing"}

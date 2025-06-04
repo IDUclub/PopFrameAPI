@@ -3,19 +3,16 @@ import json
 import pickle
 from typing import Literal
 
-import requests
 import aiohttp
-import numpy as np
 import geopandas as gpd
+import numpy as np
 import pandas as pd
-from shapely.geometry import shape
+import requests
 from loguru import logger
+from shapely.geometry import shape
 
-from app.dependences import (
-    urban_api_handler,
-    transportframe_api_handler,
-    http_exception,
-)
+from app.dependencies import (http_exception, transportframe_api_handler,
+                              urban_api_handler)
 
 
 class PopFrameModelApiService:
@@ -32,16 +29,14 @@ class PopFrameModelApiService:
 
         response = await urban_api_handler.get(
             endpoint_url="/api/v1/all_territories_without_geometry",
-            params={
-                "parent_id": 12639
-            }
+            params={"parent_id": 12639},
         )
         regions_id_list = [i["territory_id"] for i in response]
         return regions_id_list
 
     @staticmethod
     async def get_region_borders(
-            region_id: int,
+        region_id: int,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves region borders based on region id
@@ -59,8 +54,7 @@ class PopFrameModelApiService:
         )
         try:
             region_borders = gpd.GeoDataFrame(
-                geometry=[shape(response["geometry"])],
-                crs=4326
+                geometry=[shape(response["geometry"])], crs=4326
             )
             return region_borders
         except Exception as e:
@@ -70,7 +64,7 @@ class PopFrameModelApiService:
                 _input=response["geometry"],
                 _detail={
                     "Error": str(e),
-                }
+                },
             )
 
     @staticmethod
@@ -88,15 +82,14 @@ class PopFrameModelApiService:
         population_list = []
         async with aiohttp.ClientSession() as session:
             for item in range(0, len(territories_ids), 15):
-                current_ids = territories_ids[item: item + 15]
+                current_ids = territories_ids[item : item + 15]
                 task_list = [
                     urban_api_handler.get(
                         session=session,
                         endpoint_url=f"/api/v1/territory/{ter_id}/indicator_values",
-                        params={
-                            "indicator_ids": 1
-                        }
-                    ) for ter_id in current_ids
+                        params={"indicator_ids": 1},
+                    )
+                    for ter_id in current_ids
                 ]
                 results = await asyncio.gather(*task_list)
                 pop_to_add = [i[0]["value"] if len(i) > 0 else 1 for i in results]
@@ -105,7 +98,7 @@ class PopFrameModelApiService:
         try:
             population_df = pd.DataFrame(
                 np.array([territories_ids, population_list]).T,
-                columns=["territory_id", "population"]
+                columns=["territory_id", "population"],
             )
             population_df = population_df[population_df["population"] > 0].copy()
             return population_df
@@ -115,14 +108,13 @@ class PopFrameModelApiService:
                 status_code=500,
                 msg=f"error during population data retrieval",
                 _input=[territories_ids, population_list],
-                _detail={"Error": str(e)}
+                _detail={"Error": str(e)},
             )
 
     # ToDo rewrite to object api or graph api
     @staticmethod
     async def get_matrix_for_region(
-            region_id: int,
-            graph_type: Literal["car", "walk", "intermodal"]
+        region_id: int, graph_type: Literal["car", "walk", "intermodal"]
     ) -> pd.DataFrame:
         """
         Function retrieves matrix for region
@@ -143,14 +135,16 @@ class PopFrameModelApiService:
             },
         )
         try:
-            adj_mx = pd.DataFrame(response['values'], index=response['index'], columns=response['columns'])
+            adj_mx = pd.DataFrame(
+                response["values"], index=response["index"], columns=response["columns"]
+            )
         except Exception as e:
             logger.exception(e)
             raise http_exception(
                 status_code=500,
                 msg=f"error during matrix parsing",
                 _input=response,
-                _detail={"Error": str(e)}
+                _detail={"Error": str(e)},
             )
         if adj_mx.empty:
             logger.warning(f"matrix for region {region_id} is empty")
@@ -158,12 +152,11 @@ class PopFrameModelApiService:
                 status_code=404,
                 msg=f"matrix for region {region_id} not found",
                 _input=response,
-                _detail={}
+                _detail={},
             )
         return adj_mx
 
-
-    #ToDo Rewrite to api handler
+    # ToDo Rewrite to api handler
     @staticmethod
     async def get_tf_cities(region_id: int) -> gpd.GeoDataFrame:
         """
@@ -186,7 +179,9 @@ class PopFrameModelApiService:
                 response.status_code,
                 msg=f"error during cities parsing",
                 _input=response.request.url,
-                _detail=tmp if tmp is not dict and "detail" not in tmp else tmp["detail"]
+                _detail=(
+                    tmp if tmp is not dict and "detail" not in tmp else tmp["detail"]
+                ),
             )
 
         towns_gdf = pickle.loads(response.content)
@@ -205,19 +200,22 @@ class PopFrameModelApiService:
 
         response = await urban_api_handler.get(
             "/api/v1/indicators_by_parent",
-            params={
-                "parent_id": 6,
-                "get_all_subtree": "false"
-            }
+            params={"parent_id": 6, "get_all_subtree": "false"},
         )
         custom_map = {
             "Населенные пункты в агломерациях": "В агломерации",
-            "Населенные пункты вне агломераций": "Вне агломерации"
+            "Населенные пункты вне агломераций": "Вне агломерации",
         }
-        res = {custom_map.get(i["name_short"]): i for i in response if custom_map.get(i["name_short"])}
+        res = {
+            custom_map.get(i["name_short"]): i
+            for i in response
+            if custom_map.get(i["name_short"])
+        }
         return res
 
-    async def upload_popframe_indicators(self, indicators_series: pd.Series, territory_id: int) -> None:
+    async def upload_popframe_indicators(
+        self, indicators_series: pd.Series, territory_id: int
+    ) -> None:
         """
         Function uploads popframe indicators to urban api
         Args:
@@ -242,7 +240,7 @@ class PopFrameModelApiService:
                             "value": int(indicators_series[i]),
                             "value_type": "real",
                             "information_source": "modeled/PopFrame",
-                        }
+                        },
                     )
         except Exception as e:
             raise e
