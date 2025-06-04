@@ -2,10 +2,12 @@ import asyncio
 from pathlib import Path
 
 from loguru import logger
-
 from popframe.models.region import Region
-from app.dependences import http_exception, config
+
+from app.dependences import config, http_exception
+
 from .caching_serivce import CachingService
+
 
 class PopFrameCachingService(CachingService):
     """Popframe model caching service"""
@@ -29,9 +31,7 @@ class PopFrameCachingService(CachingService):
                 return True
         return False
 
-    async def get_available_models(
-            self
-    ) -> list[int]:
+    async def get_available_models(self) -> list[int]:
         """
         Function returns all cached models
         """
@@ -53,7 +53,9 @@ class PopFrameCachingService(CachingService):
             None
         """
 
-        string_path = self.caching_path.joinpath(".".join([str(region_id), "pkl"])).__str__()
+        string_path = self.caching_path.joinpath(
+            ".".join([str(region_id), "pkl"])
+        ).__str__()
         try:
             region_model.to_pickle(string_path),
             logger.info(f"Cached file {region_id} to {string_path}")
@@ -65,14 +67,11 @@ class PopFrameCachingService(CachingService):
                 _input={"region": region_model.__str__()},
                 _detail={
                     "Error": str(e),
-                    "available_files": await self.get_available_models()
-                }
+                    "available_files": await self.get_available_models(),
+                },
             )
 
-    async def load_cached_model(
-            self,
-            region_id: int
-    ):
+    async def load_cached_model(self, region_id: int):
         """
         Function loads model from cache
         Args:
@@ -83,7 +82,9 @@ class PopFrameCachingService(CachingService):
             500, Error during model loading
         """
 
-        model_to_load = self.caching_path.joinpath(".".join([str(region_id), "pkl"])).__str__()
+        model_to_load = self.caching_path.joinpath(
+            ".".join([str(region_id), "pkl"])
+        ).__str__()
         try:
             model = await asyncio.to_thread(Region.from_pickle, model_to_load)
             logger.info(f"Loaded file {region_id} to {model_to_load}")
@@ -93,7 +94,7 @@ class PopFrameCachingService(CachingService):
                 status_code=500,
                 msg=f"Failed to load file from pickle {region_id}",
                 _input={"filepath": model_to_load},
-                _detail={"Error": str(e)}
+                _detail={"Error": str(e)},
             )
 
 

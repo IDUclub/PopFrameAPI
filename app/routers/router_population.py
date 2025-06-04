@@ -1,16 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header, BackgroundTasks, Request
-import requests
-import geopandas as gpd
-from pydantic_geojson import PolygonModel
-from loguru import logger
 import sys
-from popframe.method.territory_evaluation import TerritoryEvaluation
 
+import geopandas as gpd
+import requests
+from fastapi import (APIRouter, BackgroundTasks, Depends, Header,
+                     HTTPException, Query, Request)
+from loguru import logger
+from popframe.method.territory_evaluation import TerritoryEvaluation
+from pydantic_geojson import PolygonModel
+
+from app.common.models.popframe_models.popframe_models_service import \
+    pop_frame_model_service
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
+    PopFrameAPIModel
 from app.dependences import config
-from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
 from app.models.models import PopulationCriterionResult
 from app.utils.auth import verify_token
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import PopFrameAPIModel
 
 population_router = APIRouter(prefix="/population", tags=["Population Criterion"])
 
@@ -49,6 +53,7 @@ async def get_population_criterion_score_endpoint(
     try:
         if popframe_region_model.region_id in []:
 
+            region_mo =
             evaluation =
         else:
             evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)

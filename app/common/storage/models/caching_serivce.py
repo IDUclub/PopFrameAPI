@@ -4,10 +4,7 @@ from pathlib import Path
 class CachingService:
     """Class for caching interface"""
 
-    def __init__(
-            self,
-            cache_path: Path
-    ) -> None:
+    def __init__(self, cache_path: Path) -> None:
         """
         Function initialize caching service class
         Args:

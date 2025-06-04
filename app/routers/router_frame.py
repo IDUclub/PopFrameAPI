@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
 import json
-from popframe.method.popuation_frame import PopulationFrame
-from popframe.method.aglomeration import AgglomerationBuilder
 from typing import Any, Dict
 
-from app.common.models.popframe_models.popframe_models_service import pop_frame_model_service
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import PopFrameAPIModel
+from fastapi import APIRouter, Depends, HTTPException, Query
+from popframe.method.aglomeration import AgglomerationBuilder
+from popframe.method.popuation_frame import PopulationFrame
+
+from app.common.models.popframe_models.popframe_models_service import \
+    pop_frame_model_service
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
+    PopFrameAPIModel
 
 network_router = APIRouter(prefix="/population", tags=["Population Frame"])
 
@@ -14,7 +17,7 @@ network_router = APIRouter(prefix="/population", tags=["Population Frame"])
 async def build_circle_frame_endpoint(
     popframe_region_model: PopFrameAPIModel = Depends(
         pop_frame_model_service.get_model
-    )
+    ),
 ):
     try:
         frame_method = PopulationFrame(region=popframe_region_model.region_model)
@@ -26,7 +29,9 @@ async def build_circle_frame_endpoint(
 
 @network_router.get("/build_agglomeration_frames", response_model=Dict[str, Any])
 def build_agglomeration_frames(
-        popframe_region_model: PopFrameAPIModel = Depends(pop_frame_model_service.get_model),
+    popframe_region_model: PopFrameAPIModel = Depends(
+        pop_frame_model_service.get_model
+    ),
 ):
     try:
         frame_method = PopulationFrame(region=popframe_region_model.region_model)
@@ -34,22 +39,27 @@ def build_agglomeration_frames(
 
         builder = AgglomerationBuilder(region=popframe_region_model.region_model)
         agglomeration_gdf = builder.get_agglomerations()
-        towns_with_status = builder.evaluate_city_agglomeration_status(gdf_frame, agglomeration_gdf)
+        towns_with_status = builder.evaluate_city_agglomeration_status(
+            gdf_frame, agglomeration_gdf
+        )
 
-        agglomeration_gdf['geometry'] = agglomeration_gdf['geometry'].simplify(30, preserve_topology=True)
-        towns_with_status['geometry'] = towns_with_status['geometry'].simplify(10, preserve_topology=True)
+        agglomeration_gdf["geometry"] = agglomeration_gdf["geometry"].simplify(
+            30, preserve_topology=True
+        )
+        towns_with_status["geometry"] = towns_with_status["geometry"].simplify(
+            10, preserve_topology=True
+        )
 
         agglomerations = json.loads(agglomeration_gdf.to_json())
         towns = json.loads(towns_with_status.to_json())
 
-        result = {
-            'agglomerations': agglomerations,
-            'towns': towns
-        }
+        result = {"agglomerations": agglomerations, "towns": towns}
 
         with open("agglomerations_result.json", "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=4)
 
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error during city evaluation processing: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error during city evaluation processing: {str(e)}"
+        )

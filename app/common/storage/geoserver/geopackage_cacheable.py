@@ -12,13 +12,13 @@ class CacheableGeopackageObject(Cacheable):
         self.object = to_cache
 
     def to_file(
-            self,
-            path: Path,
-            name: str,
-            ext: str = ".gpkg",
-            date: str = datetime.now(),
-            separator: str="_",
-            *args
+        self,
+        path: Path,
+        name: str,
+        ext: str = ".gpkg",
+        date: str = datetime.now(),
+        separator: str = "_",
+        *args,
     ) -> str:
         filepath = f"{date}{separator}{name}"
         for arg in args:

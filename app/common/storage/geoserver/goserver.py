@@ -5,13 +5,13 @@ from pathlib import Path
 from typing import Literal
 
 import geopandas as gpd
-
 from iduconfig import Config
-from idustorage.storage.storage import Storage
 from idugeoserverclient import IduGeoserverClient
+from idustorage.storage.storage import Storage
 
 from .geopackage_cacheable import CacheableGeopackageObject
 from .geoserver_dto import PopFrameGeoserverDTO
+
 
 class GeoserverStorage:
     """
@@ -19,9 +19,9 @@ class GeoserverStorage:
     """
 
     def __init__(
-            self,
-            cache_path: Path,
-            config: Config,
+        self,
+        cache_path: Path,
+        config: Config,
     ) -> None:
         """
         Initialisation function gor geoserver storage class
@@ -31,31 +31,23 @@ class GeoserverStorage:
         """
 
         self.config = config
-        self.storage = Storage(
-            cache_path,
-            config
-        )
+        self.storage = Storage(cache_path, config)
         self.geoserver_client = IduGeoserverClient(
             config=config,
         )
 
     async def save_gdf_to_geoserver(
-            self,
-            layer: gpd.GeoDataFrame,
-            name: str,
-            region_id: int,
-            layer_type: Literal["cities", "agglomerations"],
+        self,
+        layer: gpd.GeoDataFrame,
+        name: str,
+        region_id: int,
+        layer_type: Literal["cities", "agglomerations"],
     ) -> None:
 
         created_at = datetime.now()
         frame = CacheableGeopackageObject(layer)
         geopackage_name = self.storage.save(
-            frame,
-            name,
-            ".gpkg",
-            created_at,
-            region_id,
-            layer_type
+            frame, name, ".gpkg", created_at, region_id, layer_type
         )
 
         try:
@@ -68,15 +60,13 @@ class GeoserverStorage:
                     True,
                     None,
                     region_id,
-                    layer_type
+                    layer_type,
                 )
         except Exception as e:
             print(e)
 
     async def get_layer_from_geoserver(
-            self,
-            region_id: int,
-            layer_type: Literal["cities", "agglomerations"]
+        self, region_id: int, layer_type: Literal["cities", "agglomerations"]
     ) -> PopFrameGeoserverDTO:
         layer = await self.geoserver_client.get_layers(
             self.config.get("GEOSERVER_WORKSPACE"), "popframe", region_id, layer_type
@@ -87,18 +77,16 @@ class GeoserverStorage:
             raise HTTPException(404, "LAYER_NOT_FOUND")
 
         target_layer = layer[0]
-        split_layer = '.'.join(target_layer.href.split('.')[:-1]).split('/')[2:]
+        split_layer = ".".join(target_layer.href.split(".")[:-1]).split("/")[2:]
         return PopFrameGeoserverDTO(
             f"http://{split_layer[0]}",
             split_layer[4],
             split_layer[6],
-            target_layer.href
+            target_layer.href,
         )
 
     async def check_cached_layers(
-            self,
-            region_id: int,
-            layer_type: Literal["cities", "agglomerations"]
+        self, region_id: int, layer_type: Literal["cities", "agglomerations"]
     ) -> bool:
         """
         Function checks weather cached model exists
@@ -112,7 +100,10 @@ class GeoserverStorage:
         filenames = [os.path.split(i)[-1] for i in files]
         for filename in filenames:
             file_name_list = filename.split("_")
-            if file_name_list[2] == str(region_id) and file_name_list[3].split(".")[0] == layer_type:
+            if (
+                file_name_list[2] == str(region_id)
+                and file_name_list[3].split(".")[0] == layer_type
+            ):
                 return True
         return False
 
