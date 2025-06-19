@@ -81,8 +81,8 @@ class PopFrameModelApiService:
 
         population_list = []
         async with aiohttp.ClientSession() as session:
-            for item in range(0, len(territories_ids), 15):
-                current_ids = territories_ids[item : item + 15]
+            for item in range(0, len(territories_ids), 40):
+                current_ids = territories_ids[item : item + 40]
                 task_list = [
                     urban_api_handler.get(
                         session=session,

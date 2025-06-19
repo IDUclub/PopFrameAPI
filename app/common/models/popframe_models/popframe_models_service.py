@@ -87,16 +87,20 @@ class PopFrameModelsService:
         #     logger.info(f"No cities found for region {region_id}")
         # cities_gdf = gpd.GeoDataFrame.from_features(cities, crs=4326)
         logger.info(f"Started population retrieval for region {region_id}")
+        if "territory_id" in cities_gdf.columns:
+            cities_gdf["original_index"] = cities_gdf.index.copy()
+            cities_gdf.set_index("territory_id", inplace=True, drop=True)
         population_data_df = (
             await pop_frame_model_api_service.get_territories_population(
-                territories_ids=cities_gdf["territory_id"].to_list(),
+                territories_ids=cities_gdf.index.to_list(),
             )
         )
         logger.info(f"Successfully retrieved population data for region {region_id}")
         cities_gdf = pd.merge(
-            cities_gdf, population_data_df, left_on="territory_id", right_on="territory_id"
+            cities_gdf, population_data_df, left_index=True, right_on="territory_id"
         )
-        # cities_gdf.set_index("territory_id", inplace=True)
+
+        cities_gdf.set_index("territory_id", inplace=True, drop=True)
         cities_gdf = gpd.GeoDataFrame(cities_gdf, geometry="geometry", crs=4326)
         level_filler = LevelFiller(towns=cities_gdf)
         towns = level_filler.fill_levels()
@@ -105,6 +109,10 @@ class PopFrameModelsService:
         matrix = await pop_frame_model_api_service.get_matrix_for_region(
             region_id=region_id, graph_type="car"
         )
+        if "original_index" in cities_gdf.columns:
+            towns = pd.merge(cities_gdf[["original_index"]], towns, left_index=True, right_index=True)
+            towns = gpd.GeoDataFrame(towns, geometry="geometry", crs=4326)
+            towns.set_index("original_index", inplace=True)
         logger.info(f"Retrieved matrix for region {region_id}")
         matrix = matrix.loc[towns.index, towns.index]
         logger.info(f"Loaded matrix for region {region_id}")
