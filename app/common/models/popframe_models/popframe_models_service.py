@@ -89,13 +89,12 @@ class PopFrameModelsService:
         logger.info(f"Started population retrieval for region {region_id}")
         population_data_df = (
             await pop_frame_model_api_service.get_territories_population(
-                territories_ids=cities_gdf.index.to_list(),
+                territories_ids=cities_gdf["territory_id"].to_list(),
             )
         )
-        population_data_df.set_index("territory_id", inplace=True)
         logger.info(f"Successfully retrieved population data for region {region_id}")
         cities_gdf = pd.merge(
-            cities_gdf, population_data_df, left_index=True, right_index=True
+            cities_gdf, population_data_df, left_on="territory_id", right_on="territory_id"
         )
         # cities_gdf.set_index("territory_id", inplace=True)
         cities_gdf = gpd.GeoDataFrame(cities_gdf, geometry="geometry", crs=4326)

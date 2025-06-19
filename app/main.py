@@ -38,7 +38,8 @@ logger.add(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await pop_frame_model_service.load_and_cache_all_models_on_startup()
+    if not config.get("APP_ENV") == "development":
+        await pop_frame_model_service.load_and_cache_all_models_on_startup()
     yield
 
 
