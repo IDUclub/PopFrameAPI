@@ -9,11 +9,11 @@ from loguru import logger
 from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
 from app.routers import (router_agglomeration, router_frame, router_landuse,
-                         router_popframe, router_population, router_territory)
+                         router_popframe, router_population, router_territory, router_inequality)
 from app.routers.router_popframe_models import model_calculator_router
 
 from .common.exceptions.http_exception_wrapper import http_exception
-from .dependencies import config
+from .dependencies import config, towns_layers
 
 logger.remove()
 log_level = "DEBUG"
@@ -40,6 +40,7 @@ logger.add(
 async def lifespan(app: FastAPI):
     if not config.get("APP_ENV") == "development":
         await pop_frame_model_service.load_and_cache_all_models_on_startup()
+        await towns_layers.cache_all_towns()
     yield
 
 
@@ -103,3 +104,4 @@ app.include_router(router_agglomeration.agglomeration_router)
 app.include_router(router_landuse.landuse_router)
 app.include_router(router_popframe.popframe_router)
 app.include_router(model_calculator_router)
+app.include_router(router_inequality.inequality_router)

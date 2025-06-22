@@ -54,3 +54,23 @@ class UrbanAPIGateway:
         res_gdf = pd.concat(all_gdfs, ignore_index=True)
         res_gdf["population"] = res_gdf["indicators"].apply(lambda x: x[0].get("value"))
         return res_gdf
+
+    async def get_population_for_territory(self, territory_id: int):
+        """
+        Function retrieves population for a given territory by its ID.
+        Args:
+            territory_id (int): The ID of the territory.
+        Returns:
+            int: The population of the territory.
+        Raises:
+            Any HTTP from Urban API.
+        """
+
+        resp = await self.api_handler.get(
+            "/api/v1/territory/indicator_values",
+            params={"territory_id": territory_id, "indicator_ids": 1},
+        )
+        if not resp:
+            return None
+        return resp[0]["indicators"][0]["value"]
+
