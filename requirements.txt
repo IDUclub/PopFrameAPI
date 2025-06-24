@@ -20,3 +20,8 @@ pre-commit~=4.2.0
 black~=25.1.0
 isort~=5.13.2
 git+https://github.com/Mvin8/PopFrame.git@feat/api
+lazy-object-proxy~=1.11.0
+pyogrio~=0.11.0
+tqdm~=4.65.0
+pydantic_geojson~=0.2.0
+fonttools~=4.58.1

@@ -38,7 +38,7 @@ class TownsLayers:
         towns['is_anchor_settlement'] = towns['target_city_type'].apply(
             lambda x: x is not None and 'id' in x).astype(bool)
         towns["id"] = towns["territory_id"].copy()
-        towns = await self.towns_api_service.get_socdemo_indicators(towns)
+        towns = await self.towns_api_service.get_socdemo_indicators(towns, region_id)
         townsnet_prov_data = await self.towns_api_service.get_townsnet_prov(region_id)
         towns = pd.merge(
             towns,

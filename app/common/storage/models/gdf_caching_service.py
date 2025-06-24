@@ -1,7 +1,7 @@
 from pathlib import Path
 
+import pandas as pd
 import geopandas as gpd
-from iduconfig import Config
 from pyogrio.errors import DataSourceError
 
 from .caching_serivce import CachingService
@@ -16,7 +16,7 @@ class GdfCachingService(CachingService):
     def cache_gdf(self, region_id, gdf: gpd.GeoDataFrame):
 
         string_path = self.caching_path.joinpath(
-            ".".join([str(region_id), "towns", "pkl"])
+            ".".join(["_".join([str(region_id), "towns"]), "pkl"])
         ).__str__()
         try:
             gdf.to_pickle(string_path)
@@ -26,10 +26,11 @@ class GdfCachingService(CachingService):
     def read_gdf(self, region_id: int) -> gpd.GeoDataFrame:
 
         string_path = self.caching_path.joinpath(
-            ".".join([str(region_id), "towns", "pkl"])
+            ".".join(["_".join([str(region_id), "towns"]), "pkl"])
         ).__str__()
         try:
-            gdf = gpd.read_file(string_path)
+            df = pd.read_pickle(string_path)
+            gdf = gpd.GeoDataFrame(df, geometry="geometry", crs=4326)
         except FileNotFoundError:
             raise FileNotFoundError(f"GeoDataFrame for region {region_id} not found in cache.")
         except DataSourceError:

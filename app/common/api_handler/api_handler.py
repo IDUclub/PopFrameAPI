@@ -21,6 +21,23 @@ class APIHandler:
         self.base_url = base_url
 
     @staticmethod
+    async def check_request_params(params: dict[str, str | int | float | bool] | None) -> dict | None:
+        """
+        Function checks request parameters
+        Args:
+            params (dict[str, str | int | float | bool]  | None): Request parameters
+        Returns:
+            dict | None: Returns modified parameters if they are not empty, otherwise returns None
+        """
+
+        if params:
+            for key, param in params.items():
+                if isinstance(param, bool):
+                    params[key] = {True: "true", False: "false"}[param]
+            return params
+        return params
+
+    @staticmethod
     async def _check_response_status(
         response: aiohttp.ClientResponse,
     ) -> list | dict | None:
@@ -88,6 +105,7 @@ class APIHandler:
                     session=session,
                 )
         url = self.base_url + endpoint_url
+        params = await self.check_request_params(params)
         async with session.get(url=url, headers=headers, params=params) as response:
             result = await self._check_response_status(response)
             if result is None:
@@ -129,6 +147,7 @@ class APIHandler:
                     session=session,
                 )
         url = self.base_url + endpoint_url
+        params = await self.check_request_params(params)
         async with session.post(
             url=url,
             headers=headers,
@@ -175,6 +194,7 @@ class APIHandler:
                     session=session,
                 )
         url = self.base_url + endpoint_url
+        params = await self.check_request_params(params)
         async with session.put(
             url=url,
             headers=headers,
@@ -221,6 +241,7 @@ class APIHandler:
                     session=session,
                 )
         url = self.base_url + endpoint_url
+        params = await self.check_request_params(params)
         async with session.delete(
             url=url,
             headers=headers,
