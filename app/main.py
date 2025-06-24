@@ -27,7 +27,7 @@ logger.add(
     diagnose=True,
 )
 logger.add(
-    config.get("LOGS_FILE"),
+    ".log",
     level=log_level,
     format=log_format,
     colorize=False,
@@ -75,9 +75,9 @@ async def get_logs():
 
     try:
         return FileResponse(
-            f"{config.get('LOG_FILE')}.log",
+            f".log",
             media_type="application/octet-stream",
-            filename=f"{config.get('LOG_FILE')}.log",
+            filename=f"popframe.log",
         )
     except FileNotFoundError as e:
         raise http_exception(
