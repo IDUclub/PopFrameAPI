@@ -1,8 +1,7 @@
 import asyncio
 
-import pandas as pd
 import geopandas as gpd
-from tqdm.asyncio import tqdm
+import pandas as pd
 
 from app.common.api_handler.api_handler import APIHandler
 
@@ -13,10 +12,10 @@ class TownsAPIService:
     """
 
     def __init__(
-            self,
-            urban_api_handler: APIHandler,
-            townsnet_api_handler: APIHandler,
-            socdemo_api_handler: APIHandler
+        self,
+        urban_api_handler: APIHandler,
+        townsnet_api_handler: APIHandler,
+        socdemo_api_handler: APIHandler,
     ) -> None:
         """
         Initializes the TownsAPIService with an APIHandler instance.
@@ -39,22 +38,18 @@ class TownsAPIService:
         """
 
         regions = await self.urban_api_handler.get(
-            "/api/v1/territories",
-            params={
-                "parent_id": 12639,
-                "page_size": 100
-            }
+            "/api/v1/territories", params={"parent_id": 12639, "page_size": 100}
         )
         return [i["territory_id"] for i in regions["results"]]
 
     async def get_territories_for_region(
-            self,
-            region_id: int,
-            get_all_levels=False,
-            cities_only=False,
-            centers_only=False,
-            level: int | None=None,
-            with_geometry: bool=True
+        self,
+        region_id: int,
+        get_all_levels=False,
+        cities_only=False,
+        centers_only=False,
+        level: int | None = None,
+        with_geometry: bool = True,
     ) -> pd.DataFrame | gpd.GeoDataFrame:
         """
         Function retrieves territories for a given region by its ID.
@@ -78,7 +73,7 @@ class TownsAPIService:
                 "get_all_levels": get_all_levels,
                 "cities_only": cities_only,
                 "centers_only": centers_only,
-            }
+            },
         )
         if with_geometry:
             df_object = gpd.GeoDataFrame.from_features(territories, crs=4326)
@@ -102,15 +97,14 @@ class TownsAPIService:
         task_list = [
             self.urban_api_handler.get(
                 f"/api/v1/territory/{territory_id}/indicator_values",
-                params={
-                    "indicator_ids": 1
-                }
-            ) for territory_id in territories_ids
+                params={"indicator_ids": 1},
+            )
+            for territory_id in territories_ids
         ]
 
         results = []
         for i in range(0, len(task_list), 40):
-            results += await tqdm.gather(*task_list[i:i+40], desc=f"Retrieving population data step {i//40}")
+            results += await asyncio.gather(*task_list[i : i + 40])
         return [i[0]["value"] for i in results]
 
     async def get_territories_hierarchy(self, region_id: int) -> list[dict]:
@@ -126,17 +120,13 @@ class TownsAPIService:
 
         response = await self.urban_api_handler.get(
             "/api/v1/all_territories_without_geometry/hierarchy",
-            params={
-                "parent_id": region_id
-            }
+            params={"parent_id": region_id},
         )
         return response
 
     @staticmethod
     async def create_hierarchy_map_from_level_to_city(
-            tree_data: list[dict],
-            target_level: int,
-            limit_ids: list[int]
+        tree_data: list[dict], target_level: int, limit_ids: list[int]
     ) -> dict[int, int]:
         """
         Function creates a hierarchy of territories from the given tree data to city level with id filter.
@@ -145,10 +135,12 @@ class TownsAPIService:
             target_level (int): The level to which the hierarchy should be created.
             limit_ids (list[int]): List of IDs to filter the territories.
         Returns:
-            dict[int | int]
+            dict[int, int]: A dictionary mapping territory IDs to city IDs.
         """
 
-        async def explode_to_target_parent_level(tree_data: list[dict], target_level: int) -> list[dict]:
+        async def explode_to_target_parent_level(
+            tree_data: list[dict], target_level: int
+        ) -> list[dict]:
             """
             Function explodes the tree data to the target parent level.
             Args:
@@ -165,11 +157,15 @@ class TownsAPIService:
                 else:
                     new_node = node.copy()
                     if new_node.get("children"):
-                        new_node = explode_to_target_parent_level(new_node["children"], target_level)
+                        new_node = explode_to_target_parent_level(
+                            new_node["children"], target_level
+                        )
                     results += new_node
             return results
 
-        async def get_cities_map_for_ter(tree_data: list[dict], limit_ids_list: list[int]) -> dict[int, int]:
+        async def get_cities_map_for_ter(
+            tree_data: list[dict], limit_ids_list: list[int]
+        ) -> dict[int, int]:
             """
             Function creates a mapping of territory IDs to city IDs based on the given tree data and limit IDs.
             Args:
@@ -193,14 +189,20 @@ class TownsAPIService:
 
             res = {}
             for ter in tree_data:
-                res[ter["territory_id"]] = await define_ter_id(ter["children"], limit_ids_list)
+                res[ter["territory_id"]] = await define_ter_id(
+                    ter["children"], limit_ids_list
+                )
             return {i: key for key, value in res.items() for i in value}
 
-        filtered_tree_data = await explode_to_target_parent_level(tree_data, target_level)
-        ter_city_map =  await get_cities_map_for_ter(filtered_tree_data, limit_ids)
+        filtered_tree_data = await explode_to_target_parent_level(
+            tree_data, target_level
+        )
+        ter_city_map = await get_cities_map_for_ter(filtered_tree_data, limit_ids)
         return ter_city_map
 
-    async def get_socdemo_indicators(self, territories_gdf: gpd.GeoDataFrame, region_id: int) -> gpd.GeoDataFrame:
+    async def get_socdemo_indicators(
+        self, territories_gdf: gpd.GeoDataFrame, region_id: int
+    ) -> gpd.GeoDataFrame:
         """
         Retrieves soc demo indicators for a given territory.
         Returns passed GeoDataFrame with soc demo indicators.
@@ -225,47 +227,61 @@ class TownsAPIService:
                 None
             """
 
-            some_data = pd.json_normalize(row["temp_socdemo_dict"], sep='_')
-            some_data.drop(columns=[i for i in some_data.columns if "comm" in i or "loc" in i])
-            some_data[some_data.columns] = some_data.apply(lambda x: x[0][0] if not pd.isna(x[0][0]) else 0)
+            some_data = pd.json_normalize(row["temp_socdemo_dict"], sep="_")
+            some_data.drop(
+                columns=[i for i in some_data.columns if "comm" in i or "loc" in i]
+            )
+            some_data[some_data.columns] = some_data.apply(
+                lambda x: x[0][0] if not pd.isna(x[0][0]) else 0
+            )
             some_data["parent_id"] = [row["territory_id"]]
             return some_data.iloc[0]
 
-        sub_territories = await self.get_territories_for_region(region_id, level=3, with_geometry=False)
+        sub_territories = await self.get_territories_for_region(
+            region_id, level=3, with_geometry=False
+        )
         task_list = [
             self.socdemo_api_handler.get(
-                "/api/regions/values_identities",
-                params={
-                    "territory_id": territory_id
-                }
-            ) for territory_id in sub_territories["territory_id"]
+                "/api/regions/values_identities", params={"territory_id": territory_id}
+            )
+            for territory_id in sub_territories["territory_id"]
         ]
 
-        #ToDo Remove when socdemo will be available for all territories
+        # TODO Remove when socdemo will be available for all territories
         region_hierarchy = await self.get_territories_hierarchy(region_id)
         city_ter_map = await self.create_hierarchy_map_from_level_to_city(
             region_hierarchy,
             target_level=3,
-            limit_ids=territories_gdf["territory_id"].to_list()
+            limit_ids=territories_gdf["territory_id"].to_list(),
         )
 
-        territories_gdf["3_level_parent_id"] = territories_gdf["territory_id"].map(city_ter_map)
+        territories_gdf["3_level_parent_id"] = territories_gdf["territory_id"].map(
+            city_ter_map
+        )
 
         temp_soc_demo_resp_list = []
         for i in range(0, len(task_list), 40):
-            temp_soc_demo_resp_list += await tqdm.gather(
-                *task_list[i:i+40], desc=f"Retrieving soc demo data step {i//40}"
-            )
+            temp_soc_demo_resp_list += await asyncio.gather(*task_list[i : i + 40])
         sub_territories["temp_socdemo_dict"] = temp_soc_demo_resp_list
         soc_demo = await asyncio.to_thread(
             sub_territories[["territory_id", "temp_socdemo_dict"]].apply,
             _parse_soc_demo_response,
-            axis=1
+            axis=1,
         )
-        territories_gdf = pd.merge(territories_gdf, soc_demo, left_on="3_level_parent_id", right_on="parent_id")
+        territories_gdf = pd.merge(
+            territories_gdf, soc_demo, left_on="3_level_parent_id", right_on="parent_id"
+        )
         territories_gdf.drop(
-            columns=["territory_type", "parent", "created_at", "updated_at", "properties", "parent_id_x", "parent_id_y"],
-            inplace=True
+            columns=[
+                "territory_type",
+                "parent",
+                "created_at",
+                "updated_at",
+                "properties",
+                "parent_id_x",
+                "parent_id_y",
+            ],
+            inplace=True,
         )
         territories_gdf.rename(columns={"3_level_parent_id": "parent_id"}, inplace=True)
         return gpd.GeoDataFrame(territories_gdf, geometry="geometry", crs=4326)

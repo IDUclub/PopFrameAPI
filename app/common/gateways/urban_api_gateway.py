@@ -23,7 +23,7 @@ class UrbanAPIGateway:
 
     async def get_mo_for_fed_city_with_population(
         self, federal_city_id: int
-    ) -> gpd.GeoDataFrame:
+    ) -> gpd.GeoDataFrame | pd.DataFrame:
         """
         Function retrieves territories for a given federal city by its ID.
         Args:
@@ -55,13 +55,13 @@ class UrbanAPIGateway:
         res_gdf["population"] = res_gdf["indicators"].apply(lambda x: x[0].get("value"))
         return res_gdf
 
-    async def get_population_for_territory(self, territory_id: int):
+    async def get_population_for_territory(self, territory_id: int) -> int | None:
         """
         Function retrieves population for a given territory by its ID.
         Args:
             territory_id (int): The ID of the territory.
         Returns:
-            int: The population of the territory.
+            int | None: The population of the territory or None if population response is empty.
         Raises:
             Any HTTP from Urban API.
         """
@@ -73,4 +73,3 @@ class UrbanAPIGateway:
         if not resp:
             return None
         return resp[0]["indicators"][0]["value"]
-

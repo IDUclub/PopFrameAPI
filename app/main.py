@@ -8,8 +8,9 @@ from loguru import logger
 
 from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
-from app.routers import (router_agglomeration, router_frame, router_landuse,
-                         router_popframe, router_population, router_territory, router_inequality)
+from app.routers import (router_agglomeration, router_frame, router_inequality,
+                         router_landuse, router_popframe, router_population,
+                         router_territory)
 from app.routers.router_popframe_models import model_calculator_router
 
 from .common.exceptions.http_exception_wrapper import http_exception

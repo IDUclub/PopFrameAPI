@@ -4,15 +4,20 @@ from lazy_object_proxy.utils import await_
 from loguru import logger
 from pyogrio.errors import DataSourceError
 
-from app.common.storage.models.gdf_caching_service import GdfCachingService
+from app.common.storage.models.gdf_caching_service import GDFCachingService
 from app.dependencies import TownsAPIService, http_exception
+
 
 class TownsLayers:
     """
     Class for managing towns layers.
     """
 
-    def __init__(self, towns_api_service: TownsAPIService, towns_caching_service: GdfCachingService) -> None:
+    def __init__(
+        self,
+        towns_api_service: TownsAPIService,
+        towns_caching_service: GDFCachingService,
+    ) -> None:
         """
         Initializes the TownsLayers with a TownsAPIService instance.
         Args:
@@ -26,17 +31,17 @@ class TownsLayers:
     async def _retrieve_towns_for_region(self, region_id: int):
 
         towns = await self.towns_api_service.get_territories_for_region(
-            region_id,
-            get_all_levels=True,
-            cities_only=True,
-            centers_only=True
+            region_id, get_all_levels=True, cities_only=True, centers_only=True
         )
         towns["parent_id"] = towns["parent"].apply(lambda x: x["id"])
         towns["population"] = await self.towns_api_service.get_territories_population(
             towns["territory_id"].to_list()
         )
-        towns['is_anchor_settlement'] = towns['target_city_type'].apply(
-            lambda x: x is not None and 'id' in x).astype(bool)
+        towns["is_anchor_settlement"] = (
+            towns["target_city_type"]
+            .apply(lambda x: x is not None and "id" in x)
+            .astype(bool)
+        )
         towns["id"] = towns["territory_id"].copy()
         towns = await self.towns_api_service.get_socdemo_indicators(towns, region_id)
         townsnet_prov_data = await self.towns_api_service.get_townsnet_prov(region_id)
@@ -45,7 +50,7 @@ class TownsLayers:
             townsnet_prov_data[["territory_id", "basic", "additional", "comfort"]],
             left_on="territory_id",
             right_on="territory_id",
-            how="left"
+            how="left",
         )
         towns["provision"] = towns[["basic", "additional", "comfort"]].mean(axis=1)
         towns.set_index("id", drop=False, inplace=True)
@@ -53,7 +58,7 @@ class TownsLayers:
         self.towns_caching_service.cache_gdf(region_id, towns)
         return towns
 
-    async def get_towns(self, region_id: int, force: bool=False) -> gpd.GeoDataFrame:
+    async def get_towns(self, region_id: int, force: bool = False) -> gpd.GeoDataFrame:
         """
         Function retrieves towns for a given territory by its ID.
         Args:
@@ -72,10 +77,14 @@ class TownsLayers:
             towns = self.towns_caching_service.read_gdf(region_id)
             return towns
         except FileNotFoundError:
-            logger.info(f"Towns not found in cache for region {region_id}, retrieving from API")
+            logger.info(
+                f"Towns not found in cache for region {region_id}, retrieving from API"
+            )
             return await self._retrieve_towns_for_region(region_id)
         except DataSourceError:
-            logger.info(f"Towns not found in cache for region {region_id}, retrieving from API")
+            logger.info(
+                f"Towns not found in cache for region {region_id}, retrieving from API"
+            )
             return await self._retrieve_towns_for_region(region_id)
         except Exception as e:
             logger.exception(e)
@@ -83,8 +92,8 @@ class TownsLayers:
                 500,
                 f"Error during processing towns",
                 _input=region_id,
-                _detail={"error": e.__str__()}
-            )
+                _detail={"error": repr(e)},
+            ) from e
 
     async def cache_all_towns(self) -> None:
         """

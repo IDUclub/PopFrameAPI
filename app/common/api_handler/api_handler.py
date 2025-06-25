@@ -21,7 +21,9 @@ class APIHandler:
         self.base_url = base_url
 
     @staticmethod
-    async def check_request_params(params: dict[str, str | int | float | bool] | None) -> dict | None:
+    async def check_request_params(
+        params: dict[str, str | int | float | bool] | None,
+    ) -> dict | None:
         """
         Function checks request parameters
         Args:

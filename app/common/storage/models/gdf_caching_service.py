@@ -1,13 +1,13 @@
 from pathlib import Path
 
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
 from pyogrio.errors import DataSourceError
 
 from .caching_serivce import CachingService
 
 
-class GdfCachingService(CachingService):
+class GDFCachingService(CachingService):
 
     def __init__(self, cache_path: Path) -> None:
 
@@ -21,7 +21,7 @@ class GdfCachingService(CachingService):
         try:
             gdf.to_pickle(string_path)
         except Exception as e:
-            raise Exception(f"Error caching GeoDataFrame for region {region_id}: {e}")
+            raise Exception(f"Error caching GeoDataFrame for region {region_id}") from e
 
     def read_gdf(self, region_id: int) -> gpd.GeoDataFrame:
 
@@ -32,7 +32,11 @@ class GdfCachingService(CachingService):
             df = pd.read_pickle(string_path)
             gdf = gpd.GeoDataFrame(df, geometry="geometry", crs=4326)
         except FileNotFoundError:
-            raise FileNotFoundError(f"GeoDataFrame for region {region_id} not found in cache.")
+            raise FileNotFoundError(
+                f"GeoDataFrame for region {region_id} not found in cache."
+            )
         except DataSourceError:
-            raise DataSourceError(f"GeoDataFrame for region {region_id} not found in cache.")
+            raise DataSourceError(
+                f"GeoDataFrame for region {region_id} not found in cache."
+            )
         return gdf
