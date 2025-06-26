@@ -61,5 +61,6 @@ def build_agglomeration_frames(
         return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error during city evaluation processing: {repr(e)}"
+            status_code=500,
+            detail=f"Error during city evaluation processing: {repr(e)}",
         )

@@ -10,3 +10,4 @@ build.sh
 **.log
 venv/
 .venv/
+.__cache__/

@@ -99,5 +99,5 @@ class PopFrameCachingService(CachingService):
 
 
 pop_frame_caching_service = PopFrameCachingService(
-    Path().absolute() / config.get("POPFRAME_MODEL_CACHE")
+    Path().absolute() / config.get("COMMON_CACHE") / config.get("POPFRAME_MODEL_CACHE")
 )
