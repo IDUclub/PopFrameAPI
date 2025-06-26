@@ -8,12 +8,13 @@ from loguru import logger
 
 from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
-from app.routers import (router_agglomeration, router_frame, router_landuse,
-                         router_popframe, router_population, router_territory)
+from app.routers import (router_agglomeration, router_frame, router_inequality,
+                         router_landuse, router_popframe, router_population,
+                         router_territory)
 from app.routers.router_popframe_models import model_calculator_router
 
 from .common.exceptions.http_exception_wrapper import http_exception
-from .dependencies import config
+from .dependencies import config, towns_layers
 
 logger.remove()
 log_level = "DEBUG"
@@ -27,7 +28,7 @@ logger.add(
     diagnose=True,
 )
 logger.add(
-    config.get("LOGS_FILE"),
+    ".log",
     level=log_level,
     format=log_format,
     colorize=False,
@@ -40,6 +41,7 @@ logger.add(
 async def lifespan(app: FastAPI):
     if not config.get("APP_ENV") == "development":
         await pop_frame_model_service.load_and_cache_all_models_on_startup()
+        await towns_layers.cache_all_towns()
     yield
 
 
@@ -74,9 +76,9 @@ async def get_logs():
 
     try:
         return FileResponse(
-            f"{config.get('LOG_FILE')}.log",
+            f".log",
             media_type="application/octet-stream",
-            filename=f"{config.get('LOG_FILE')}.log",
+            filename=f"popframe.log",
         )
     except FileNotFoundError as e:
         raise http_exception(
@@ -103,3 +105,4 @@ app.include_router(router_agglomeration.agglomeration_router)
 app.include_router(router_landuse.landuse_router)
 app.include_router(router_popframe.popframe_router)
 app.include_router(model_calculator_router)
+app.include_router(router_inequality.inequality_router)

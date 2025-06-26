@@ -42,7 +42,7 @@ async def get_href(region_id: int) -> list[PopFrameGeoserverDTO]:
             return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error during agglomeration processing: {str(e)}"
+            status_code=500, detail=f"Error during agglomeration processing: {repr(e)}"
         )
 
 
@@ -63,7 +63,7 @@ async def get_agglomeration_endpoint(
         return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error during agglomeration processing: {str(e)}"
+            status_code=500, detail=f"Error during agglomeration processing: {repr(e)}"
         )
 
 
@@ -91,5 +91,5 @@ async def evaluate_cities_in_agglomeration(
         return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error during city evaluation processing: {str(e)}"
+            status_code=500, detail=f"Error during city evaluation processing: {repr(e)}"
         )

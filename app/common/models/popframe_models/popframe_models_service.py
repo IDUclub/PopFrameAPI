@@ -58,7 +58,7 @@ class PopFrameModelsService:
                     "cities": json.loads(towns.to_crs(local_crs).to_json()),
                     "adj_mx": adj_mx.to_dict(),
                 },
-                _detail={"Error": str(e)},
+                _detail={"Error": repr(e)},
             )
 
     async def calculate_model(self, region_id: int) -> None:
@@ -110,7 +110,9 @@ class PopFrameModelsService:
             region_id=region_id, graph_type="car"
         )
         if "original_index" in cities_gdf.columns:
-            towns = pd.merge(cities_gdf[["original_index"]], towns, left_index=True, right_index=True)
+            towns = pd.merge(
+                cities_gdf[["original_index"]], towns, left_index=True, right_index=True
+            )
             towns = gpd.GeoDataFrame(towns, geometry="geometry", crs=4326)
             towns.set_index("original_index", inplace=True)
         logger.info(f"Retrieved matrix for region {region_id}")

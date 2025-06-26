@@ -63,7 +63,7 @@ class PopFrameModelApiService:
                 msg=f"Error geometry parsing for borders of region {region_id}",
                 _input=response["geometry"],
                 _detail={
-                    "Error": str(e),
+                    "Error": repr(e),
                 },
             )
 
@@ -108,7 +108,7 @@ class PopFrameModelApiService:
                 status_code=500,
                 msg=f"error during population data retrieval",
                 _input=[territories_ids, population_list],
-                _detail={"Error": str(e)},
+                _detail={"Error": repr(e)},
             )
 
     # ToDo rewrite to object api or graph api
@@ -144,7 +144,7 @@ class PopFrameModelApiService:
                 status_code=500,
                 msg=f"error during matrix parsing",
                 _input=response,
-                _detail={"Error": str(e)},
+                _detail={"Error": repr(e)},
             )
         if adj_mx.empty:
             logger.warning(f"matrix for region {region_id} is empty")
