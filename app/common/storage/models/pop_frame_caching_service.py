@@ -66,7 +66,7 @@ class PopFrameCachingService(CachingService):
                 msg=f"Failed to cache file to pickle {region_id}",
                 _input={"region": region_model.__str__()},
                 _detail={
-                    "Error": str(e),
+                    "Error": repr(e),
                     "available_files": await self.get_available_models(),
                 },
             )
@@ -94,7 +94,7 @@ class PopFrameCachingService(CachingService):
                 status_code=500,
                 msg=f"Failed to load file from pickle {region_id}",
                 _input={"filepath": model_to_load},
-                _detail={"Error": str(e)},
+                _detail={"Error": repr(e)},
             )
 
 

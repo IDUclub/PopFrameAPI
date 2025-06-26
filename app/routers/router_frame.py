@@ -24,7 +24,7 @@ async def build_circle_frame_endpoint(
         gdf_frame = frame_method.build_circle_frame()
         return json.loads(gdf_frame.to_json())
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"An error occurred: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"An error occurred: {repr(e)}")
 
 
 @network_router.get("/build_agglomeration_frames", response_model=Dict[str, Any])
@@ -61,5 +61,5 @@ def build_agglomeration_frames(
         return result
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Error during city evaluation processing: {str(e)}"
+            status_code=500, detail=f"Error during city evaluation processing: {repr(e)}"
         )
