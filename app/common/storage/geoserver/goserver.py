@@ -92,6 +92,7 @@ class GeoserverStorage:
         Function checks weather cached model exists
         Args:
             region_id (int): Region ID
+            layer_type (Literal["cities", "agglomerations"]): gpkg layer type for geoserver
         Returns:
             bool: weather model exists
         """

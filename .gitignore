@@ -144,12 +144,7 @@ dmypy.json
 *.gpkg
 /popframe/output_data
 
-cache/
-__popframe_model_cache__
-__geoserver__cache__
-__geoserver_cache__
-__popframe_towns_cache__
-/examples/data
+__cache__/
 
 # PyCharm env
 .idea

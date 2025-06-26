@@ -1,8 +1,8 @@
 import json
 
+import geopandas as gpd
 from fastapi import APIRouter
 from loguru import logger
-import geopandas as gpd
 from popframe.method.anchor_settlement import AnchorSettlementBuilder
 from popframe.method.spatial_inequality import SpatialInequalityCalculator
 

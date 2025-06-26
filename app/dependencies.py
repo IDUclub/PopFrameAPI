@@ -18,7 +18,7 @@ townsnet_api_handler = APIHandler(config.get("TOWNSNET_API"))
 socdemo_api_handler = APIHandler(config.get("SOCDEMO_API"))
 
 towns_caching_service = GDFCachingService(
-    Path().absolute() / config.get("POPFRAME_TOWNS_CACHE")
+    Path().absolute() / config.get("COMMON_CACHE") / config.get("POPFRAME_TOWNS_CACHE")
 )
 urban_api_gateway = UrbanAPIGateway(urban_api_handler)
 townsnet_api_service = TownsAPIService(
@@ -27,5 +27,8 @@ townsnet_api_service = TownsAPIService(
 
 towns_layers = TownsLayers(townsnet_api_service, towns_caching_service)
 geoserver_storage = GeoserverStorage(
-    cache_path=Path().absolute() / config.get("GEOSERVER_CACHE_PATH"), config=config
+    cache_path=Path().absolute()
+    / config.get("COMMON_CACHE")
+    / config.get("GEOSERVER_CACHE_PATH"),
+    config=config,
 )
