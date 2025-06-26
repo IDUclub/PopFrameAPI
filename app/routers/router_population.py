@@ -52,7 +52,7 @@ async def test_population_criterion_endpoint(
         result = evaluation.population_criterion(territories_gdf=polygon_gdf)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=repr(e))
 
 
 @population_router.post("/get_population_criterion_score", response_model=list[float])
@@ -89,7 +89,7 @@ async def get_population_criterion_score_endpoint(
             raise HTTPException(status_code=404, detail="Результаты не найдены")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=repr(e))
 
 
 async def process_population_criterion(

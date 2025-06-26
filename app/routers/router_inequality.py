@@ -2,6 +2,7 @@ import json
 
 from fastapi import APIRouter
 from loguru import logger
+import geopandas as gpd
 from popframe.method.anchor_settlement import AnchorSettlementBuilder
 from popframe.method.spatial_inequality import SpatialInequalityCalculator
 
@@ -82,7 +83,7 @@ async def cache_towns_for_region(region_id: int, force: bool = False):
         logger.exception(e)
         raise http_exception(
             500,
-            f"Error during towns caching: {str(e)}",
+            f"Error during towns caching: {repr(e)}",
             _input={"region_id": region_id, "force": force},
-            _detail={"Error": str(e)},
+            _detail={"Error": repr(e)},
         )

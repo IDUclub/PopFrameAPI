@@ -6,6 +6,9 @@ import pandas as pd
 from app.common.api_handler.api_handler import APIHandler
 
 
+SIMULTANIOUS_CONNECTIONS = 40
+
+
 class TownsAPIService:
     """
     Service for interacting with the Urban API to retrieve town data.
@@ -103,8 +106,8 @@ class TownsAPIService:
         ]
 
         results = []
-        for i in range(0, len(task_list), 40):
-            results += await asyncio.gather(*task_list[i : i + 40])
+        for i in range(0, len(task_list), SIMULTANIOUS_CONNECTIONS):
+            results += await asyncio.gather(*task_list[i : i + SIMULTANIOUS_CONNECTIONS])
         return [i[0]["value"] for i in results]
 
     async def get_territories_hierarchy(self, region_id: int) -> list[dict]:
@@ -260,8 +263,8 @@ class TownsAPIService:
         )
 
         temp_soc_demo_resp_list = []
-        for i in range(0, len(task_list), 40):
-            temp_soc_demo_resp_list += await asyncio.gather(*task_list[i : i + 40])
+        for i in range(0, len(task_list), SIMULTANIOUS_CONNECTIONS):
+            temp_soc_demo_resp_list += await asyncio.gather(*task_list[i : i + SIMULTANIOUS_CONNECTIONS])
         sub_territories["temp_socdemo_dict"] = temp_soc_demo_resp_list
         soc_demo = await asyncio.to_thread(
             sub_territories[["territory_id", "temp_socdemo_dict"]].apply,

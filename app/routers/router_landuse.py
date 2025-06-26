@@ -63,4 +63,4 @@ async def get_landuse_data_endpoint(
         landuse_data = urbanisation.get_landuse_data(territories=polygon_gdf)
         return json.loads(landuse_data.to_json())
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=repr(e))

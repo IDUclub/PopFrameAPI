@@ -58,7 +58,7 @@ class PopFrameModelsService:
                     "cities": json.loads(towns.to_crs(local_crs).to_json()),
                     "adj_mx": adj_mx.to_dict(),
                 },
-                _detail={"Error": str(e)},
+                _detail={"Error": repr(e)},
             )
 
     async def calculate_model(self, region_id: int) -> None:
