@@ -109,7 +109,7 @@ class TownsAPIService:
             results += await asyncio.gather(
                 *task_list[i : i + SIMULTANIOUS_CONNECTIONS]
             )
-        return [i[0]["value"] for i in results]
+        return [i[0]["value"] if i else 0 for i in results]
 
     async def get_territories_hierarchy(self, region_id: int) -> list[dict]:
         """
