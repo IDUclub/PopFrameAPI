@@ -21,6 +21,8 @@ COPY pip.conf /etc/xdg/pip/pip.conf
 COPY requirements.txt .
 RUN python -m pip install --upgrade pip
 RUN python -m pip install -r requirements.txt
+RUN python -m pip uninstall numpy -y
+RUN python -m pip install numpy==1.26.4
 
 WORKDIR /app
 COPY . /app
