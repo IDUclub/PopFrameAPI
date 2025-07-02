@@ -79,9 +79,9 @@ class GeoserverStorage:
         target_layer = layer[0]
         split_layer = ".".join(target_layer.href.split(".")[:-1]).split("/")[2:]
         return PopFrameGeoserverDTO(
-            f"http://{split_layer[0]}",
-            split_layer[4],
-            split_layer[6],
+            f"http://{split_layer[:3]}",
+            split_layer[3],
+            split_layer[5],
             target_layer.href,
         )
 
