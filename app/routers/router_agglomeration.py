@@ -18,32 +18,27 @@ agglomeration_router = APIRouter(prefix="/agglomeration", tags=["Agglomeration"]
     "/geoserver/get_href", response_model=list[PopFrameGeoserverDTO]
 )
 async def get_href(region_id: int) -> list[PopFrameGeoserverDTO]:
-    try:
 
-        agglomeration_check = await geoserver_storage.check_cached_layers(
-            region_id=region_id, layer_type="agglomerations"
+    agglomeration_check = await geoserver_storage.check_cached_layers(
+        region_id=region_id, layer_type="agglomerations"
+    )
+    cities_check = await geoserver_storage.check_cached_layers(
+        region_id=region_id, layer_type="cities"
+    )
+    if agglomeration_check and cities_check:
+        agglomerations = await geoserver_storage.get_layer_from_geoserver(
+            region_id=region_id,
+            layer_type="agglomerations",
         )
-        cities_check = await geoserver_storage.check_cached_layers(
-            region_id=region_id, layer_type="cities"
+        cities = await geoserver_storage.get_layer_from_geoserver(
+            region_id=region_id,
+            layer_type="cities",
         )
-        if agglomeration_check and cities_check:
-            agglomerations = await geoserver_storage.get_layer_from_geoserver(
-                region_id=region_id,
-                layer_type="agglomerations",
-            )
-            cities = await geoserver_storage.get_layer_from_geoserver(
-                region_id=region_id,
-                layer_type="cities",
-            )
-            return [agglomerations, cities]
-        else:
-            await pop_frame_model_service.calculate_model(region_id)
-            result = await get_href(region_id)
-            return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error during agglomeration processing: {repr(e)}"
-        )
+        return [agglomerations, cities]
+    else:
+        await pop_frame_model_service.calculate_model(region_id)
+        result = await get_href(region_id)
+        return result
 
 
 @agglomeration_router.get("/build_agglomeration")

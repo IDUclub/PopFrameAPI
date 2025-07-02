@@ -30,7 +30,7 @@ async def process_combined_evaluation(
     try:
         # Общая часть — получение project_id и геометрии территории
         scenario_response = requests.get(
-            f"{config.get('URBAN_API')}/scenarios/{project_scenario_id}",
+            f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
         if scenario_response.status_code != 200:
@@ -42,7 +42,7 @@ async def process_combined_evaluation(
             raise Exception("Project ID is missing in scenario data.")
 
         territory_response = requests.get(
-            f"{config.get('URBAN_API')}/projects/{project_id}/territory",
+            f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
             headers={"Authorization": f"Bearer {token}"},
         )
         if territory_response.status_code != 200:
@@ -92,7 +92,7 @@ async def process_combined_evaluation(
             }
 
             indicators_response = requests.put(
-                f"{config.get('URBAN_API')}/scenarios/indicators_values",
+                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
                 headers={"Authorization": f"Bearer {token}"},
                 json=indicator_data,
             )
@@ -120,7 +120,7 @@ async def process_combined_evaluation(
             }
 
             indicators_response = requests.put(
-                f"{config.get('URBAN_API')}/scenarios/indicators_values",
+                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
                 headers={"Authorization": f"Bearer {token}"},
                 json=indicator_data,
             )
@@ -130,6 +130,7 @@ async def process_combined_evaluation(
                     f"Тело ответа: {indicators_response.text}"
                 )
                 raise Exception("Ошибка при сохранении показателей (население)")
+            logger.info(f"Saved population indicators values for scenario {project_scenario_id}")
 
     except Exception as e:
         logger.exception(f"Ошибка при комбинированной обработке: {e}")

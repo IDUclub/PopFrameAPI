@@ -10,7 +10,6 @@ pydantic-geojson~=0.2.0
 requests==2.31.0
 aiofiles~=24.1.0
 idustorage~=1.0.1
-numpy~=1.23.5
 geopandas~=1.0.1
 pandas~=1.5.3
 shapely~=2.0.1
@@ -22,6 +21,4 @@ isort~=5.13.2
 git+https://github.com/Mvin8/PopFrame.git@feat/api
 lazy-object-proxy~=1.11.0
 pyogrio~=0.11.0
-tqdm~=4.65.0
 pydantic_geojson~=0.2.0
-fonttools~=4.58.1

@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
+from app.common.exceptions.exception_handler import ExceptionHandlerMiddleware
 from app.routers import (router_agglomeration, router_frame, router_inequality,
                          router_landuse, router_popframe, router_population,
                          router_territory)
@@ -60,6 +61,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ExceptionHandlerMiddleware)
 
 
 # Root endpoint
