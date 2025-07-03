@@ -68,28 +68,24 @@ async def get_population_criterion_score_endpoint(
             detail="Неверный формат GeoJSON, ожидался FeatureCollection",
         )
 
-    try:
-        polygon_gdf = gpd.GeoDataFrame.from_features(geojson_data["features"], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
-        if popframe_region_model.region_id in [3138, 3268, 16141]:
-            region_mo = await urban_api_gateway.get_mo_for_fed_city_with_population(
-                popframe_region_model.region_id
-            )
-            scorer = CityPopulationScorer(region_mo, polygon_gdf)
-            return pd.DataFrame(scorer.run())["score"].tolist()
-        else:
-            evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
-            scores = []
-            result = evaluation.population_criterion(territories_gdf=polygon_gdf)
-            if result:
-                for res in result:
-                    scores.append(float(res["score"]))
-                return scores
-
-            raise HTTPException(status_code=404, detail="Результаты не найдены")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=repr(e))
+    polygon_gdf = gpd.GeoDataFrame.from_features(geojson_data["features"], crs=4326)
+    polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
+    if popframe_region_model.region_id in [3138, 3268, 16141]:
+        region_mo = await urban_api_gateway.get_mo_for_fed_city_with_population(
+            popframe_region_model.region_id
+        )
+        if len(polygon_gdf) == 1:
+            polygon_gdf["hexagon_id"] = 0
+        scorer = CityPopulationScorer(region_mo, polygon_gdf)
+        return pd.DataFrame(scorer.run())["score"].tolist()
+    else:
+        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
+        scores = []
+        result = evaluation.population_criterion(territories_gdf=polygon_gdf)
+        if result:
+            for res in result:
+                scores.append(float(res["score"]))
+            return scores
 
 
 async def process_population_criterion(
