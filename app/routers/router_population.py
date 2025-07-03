@@ -87,8 +87,6 @@ async def get_population_criterion_score_endpoint(
                 scores.append(float(res["score"]))
             return scores
 
-        raise HTTPException(status_code=404, detail="Результаты не найдены")
-
 
 async def process_population_criterion(
     popframe_region_model: PopFrameAPIModel, project_scenario_id: int, token: str
