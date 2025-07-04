@@ -2,6 +2,7 @@ import asyncio
 
 import geopandas as gpd
 import pandas as pd
+from lazy_object_proxy.utils import await_
 
 from app.common.api_handler.api_handler import APIHandler
 from app.common.exceptions.http_exception_wrapper import http_exception
@@ -23,18 +24,6 @@ class UrbanAPIGateway:
         """
 
         self.api_handler = api_handler
-
-    async def get_territory_by_id(
-            self,
-            territory_id: int,
-            as_gdf: bool = False,
-    ) -> dict | gpd.GeoDataFrame:
-        """
-        Function retrieves territory by ID
-        Args:
-            territory_id (int): The territory ID.
-            as_gdf (bool, optional): Whether to return as GeoDataFrame. Defaults to False.
-        """
 
     async def get_mo_for_fed_city_with_population(
         self, federal_city_id: int
@@ -176,8 +165,17 @@ class UrbanAPIGateway:
 
     async def get_territories_gdf_by_ids(
             self,
-            territory_ids: list[str],
+            territories_ids: list[str],
+            centers_only: bool = False,
     ) -> gpd.GeoDataFrame:
+        """
+        Function retrieves territories for a given list of IDs.
+        Args:
+            territories_ids (list[str]): The IDs of the territories.
+            centers_only (bool): Whether the territories should be returned centers.
+        Returns:
+            gpd.GeoDataFrame: A GeoDataFrame containing the territories of the territory in 4326 crs.
+        """
 
-        if territory_ids:
-
+        resp = await self.api_handler.get(f"/api/v1/territories/{territories_ids}")
+        return gpd.GeoDataFrame.from_features(resp, crs=4326)

@@ -66,11 +66,7 @@ async def get_context_inequality(
     towns = await towns_layers.get_towns(project_info["territory"]["id"])
     calculator = SpatialInequalityCalculator(region=model.region_model)
     spatial_inequality = calculator.calculate_spatial_inequality(towns)
-    aggregate_territories = (
-        await towns_layers.towns_api_service.get_territories_for_region(
-            region_id, get_all_levels=True, level=level
-        )
-    )
+    aggregate_territories = await urban_api_gateway.get_territories_gdf_by_ids(project_info["properties"]["context"])
 
 @inequality_router.put("/cache_towns/{region_id}")
 async def cache_towns_for_region(region_id: int, force: bool = False):
