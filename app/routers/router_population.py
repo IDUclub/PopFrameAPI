@@ -3,8 +3,7 @@ import sys
 import geopandas as gpd
 import pandas as pd
 import requests
-from fastapi import (APIRouter, BackgroundTasks, Depends, Header,
-                     HTTPException, Query, Request)
+from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query)
 from loguru import logger
 from popframe.method.city_evaluation import CityPopulationScorer
 from popframe.method.territory_evaluation import TerritoryEvaluation
@@ -16,7 +15,7 @@ from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import
     PopFrameAPIModel
 from app.dependencies import config, urban_api_gateway
 from app.models.models import PopulationCriterionResult
-from app.utils.auth import verify_token
+from app.common.auth.auth import verify_token
 
 population_router = APIRouter(prefix="/population", tags=["Population Criterion"])
 

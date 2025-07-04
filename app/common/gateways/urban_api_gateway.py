@@ -1,7 +1,10 @@
+import asyncio
+
 import geopandas as gpd
 import pandas as pd
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.exceptions.http_exception_wrapper import http_exception
 
 
 class UrbanAPIGateway:
@@ -20,6 +23,18 @@ class UrbanAPIGateway:
         """
 
         self.api_handler = api_handler
+
+    async def get_territory_by_id(
+            self,
+            territory_id: int,
+            as_gdf: bool = False,
+    ) -> dict | gpd.GeoDataFrame:
+        """
+        Function retrieves territory by ID
+        Args:
+            territory_id (int): The territory ID.
+            as_gdf (bool, optional): Whether to return as GeoDataFrame. Defaults to False.
+        """
 
     async def get_mo_for_fed_city_with_population(
         self, federal_city_id: int
@@ -73,3 +88,96 @@ class UrbanAPIGateway:
         if not resp:
             return None
         return resp[0]["indicators"][0]["value"]
+
+    async def get_project_id_by_scenario_id(
+            self,
+            scenario_id: int,
+            token: str | None = None
+    ) -> int:
+        """
+        Function retrieves project id by scenario id by its ID.
+        Args:
+            scenario_id (int): The ID of the scenario.
+            token (str | None): The API token. Defaults to None.
+        Returns:
+            int: The project id.
+        Raises:
+            Any HTTP from Urban API.
+        """
+
+        headers = {"Authorization": f"Bearer {token}"} if token else None
+        resp = await self.api_handler.get(
+            f"/api/v1/scenarios/{scenario_id}",
+            headers=headers
+        )
+        if resp:
+            return resp["project_id"]["project_id"]
+        raise http_exception(
+            404,
+            "No project data found",
+            _input={
+                "token": token,
+                "scenario_id": scenario_id,
+            },
+            _detail={}
+        )
+
+    async def get_project_info(
+            self,
+            project_id: int,
+            token: str | None = None,
+    ) -> dict:
+        """
+        Function retrieves project info by its ID.
+        Args:
+            project_id (int): The ID of the project.
+            token (str | None): User API token for private projects. Defaults to None.
+        Returns
+            dict: The project info.
+        Raises:
+            Any HTTP from Urban API.
+        """
+
+        headers = {"Authorization": f"Bearer {token}"} if token else None
+        resp = await self.api_handler.get(
+            f"/api/v1/projects/{project_id}",
+            headers=headers
+        )
+        if resp:
+            return resp
+        raise http_exception(
+            404,
+            "No project data found",
+            _input={
+                "token": token,
+                "project_id": project_id,
+            },
+            _detail={}
+        )
+
+    async def get_project_info_by_scenario(
+            self,
+            scenario_id: int,
+            token: str | None=None,
+    ) -> dict:
+        """
+        Function retrieves project info for a given scenario by its ID.
+        Args:
+            scenario_id (int): The ID of the scenario.
+            token (str | None): The user private API token. Defaults to None.
+        Returns:
+            dict: The project info of the scenario.
+        Raises:
+            Any HTTP from Urban API.
+        """
+
+        project_id = await self.get_project_id_by_scenario_id(scenario_id, token)
+        return await self.get_project_info(project_id, token)
+
+    async def get_territories_gdf_by_ids(
+            self,
+            territory_ids: list[str],
+    ) -> gpd.GeoDataFrame:
+
+        if territory_ids:
+

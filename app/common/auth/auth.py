@@ -4,7 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 http_bearer = HTTPBearer()
 
 
-def _get_token_from_header(credentials: HTTPAuthorizationCredentials) -> str:
+async def verify_token(credentials: HTTPAuthorizationCredentials) -> str:
     if not credentials:
         raise HTTPException(
             status_code=401,
@@ -19,9 +19,3 @@ def _get_token_from_header(credentials: HTTPAuthorizationCredentials) -> str:
         )
 
     return token
-
-
-async def verify_token(
-    credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
-):
-    return _get_token_from_header(credentials)

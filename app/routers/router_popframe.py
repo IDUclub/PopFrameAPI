@@ -11,7 +11,7 @@ from app.common.models.popframe_models.popframe_models_service import \
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
     PopFrameAPIModel
 from app.dependencies import config
-from app.utils.auth import verify_token
+from app.common.auth.auth import verify_token
 
 popframe_router = APIRouter(prefix="/popframe", tags=["PopFrame Evaluation"])
 
@@ -103,7 +103,6 @@ async def process_combined_evaluation(
                 )
                 raise Exception("Ошибка при сохранении показателей (локация)")
 
-        # Выполнение второй оценки
         population_results = evaluation.population_criterion(
             territories_gdf=polygon_gdf
         )

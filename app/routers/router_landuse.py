@@ -3,8 +3,7 @@ from typing import Any, Dict
 
 import geopandas as gpd
 import requests
-from fastapi import (APIRouter, BackgroundTasks, Depends, Header,
-                     HTTPException, Query, Request)
+from fastapi import (APIRouter, Depends, HTTPException, Query)
 from popframe.method.landuse_assessment import LandUseAssessment
 
 from app.common.models.popframe_models.popframe_models_service import \
@@ -12,7 +11,7 @@ from app.common.models.popframe_models.popframe_models_service import \
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
     PopFrameAPIModel
 from app.dependencies import config
-from app.utils.auth import verify_token
+from app.common.auth.auth import verify_token
 
 landuse_router = APIRouter(prefix="/landuse", tags=["Landuse data"])
 
