@@ -11,7 +11,7 @@ from popframe.method.spatial_inequality import SpatialInequalityCalculator
 from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
 from app.dependencies import http_exception, towns_layers, urban_api_gateway
-from app.common.auth.auth import verify_token
+from app.common.auth.bearer import verify_bearer_token
 
 inequality_router = APIRouter(prefix="/inequality", tags=["inequality"])
 
@@ -61,7 +61,7 @@ async def get_spatial_inequality(region_id: int, level: int | None = None):
 @inequality_router.get("/context_inequality")
 async def get_context_inequality(
         project_id: int,
-        token: str | None = Depends(verify_token)
+        token: str | None = Depends(verify_bearer_token)
 ) -> dict[str, FeatureCollectionModel]:
     """
     Endpoint returns spatial inequality for a project context. Auth required (via bearer token).

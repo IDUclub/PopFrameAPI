@@ -13,7 +13,7 @@ from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import
     PopFrameAPIModel
 from app.dependencies import config
 from app.models.models import EvaluateTerritoryLocationResult
-from app.common.auth.auth import verify_token
+from app.common.auth.bearer import verify_bearer_token
 
 territory_router = APIRouter(prefix="/territory", tags=["Territory Evaluation"])
 
@@ -37,7 +37,7 @@ async def evaluate_territory_location_endpoint(
     project_scenario_id: int | None = Query(
         None, description="ID сценария проекта, если имеется"
     ),
-    token: str = Depends(verify_token),  # Добавляем токен для аутентификации
+    token: str = Depends(verify_bearer_token),  # Добавляем токен для аутентификации
 ):
     try:
         evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
@@ -148,7 +148,7 @@ async def save_evaluate_location_endpoint(
     project_scenario_id: int | None = Query(
         None, description="Project scenario ID, if available"
     ),
-    token: str = Depends(verify_token),  # Добавляем токен для аутентификации
+    token: str = Depends(verify_bearer_token),  # Добавляем токен для аутентификации
 ):
     # Добавляем фоновую задачу
     background_tasks.add_task(

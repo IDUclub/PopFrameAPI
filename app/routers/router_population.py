@@ -15,7 +15,7 @@ from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import
     PopFrameAPIModel
 from app.dependencies import config, urban_api_gateway
 from app.models.models import PopulationCriterionResult
-from app.common.auth.auth import verify_token
+from app.common.auth.bearer import verify_bearer_token
 
 population_router = APIRouter(prefix="/population", tags=["Population Criterion"])
 
@@ -37,7 +37,7 @@ async def test_population_criterion_endpoint(
     popframe_region_model: PopFrameAPIModel = Depends(
         pop_frame_model_service.get_model
     ),
-    token: str = Depends(verify_token),
+    token: str = Depends(verify_bearer_token),
 ):
     try:
         evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
@@ -163,7 +163,7 @@ async def save_population_criterion_endpoint(
     project_scenario_id: int | None = Query(
         None, description="ID сценария проекта, если имеется"
     ),
-    token: str = Depends(verify_token),
+    token: str = Depends(verify_bearer_token),
 ):
 
     background_tasks.add_task(

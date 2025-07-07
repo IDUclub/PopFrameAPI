@@ -11,7 +11,7 @@ from app.common.models.popframe_models.popframe_models_service import \
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
     PopFrameAPIModel
 from app.dependencies import config
-from app.common.auth.auth import verify_token
+from app.common.auth.bearer import verify_bearer_token
 
 landuse_router = APIRouter(prefix="/landuse", tags=["Landuse data"])
 
@@ -23,7 +23,7 @@ async def get_landuse_data_endpoint(
         pop_frame_model_service.get_model
     ),
     project_scenario_id: int | None = Query(None, description="ID сценария cценария"),
-    token: str = Depends(verify_token),
+    token: str = Depends(verify_bearer_token),
 ):
     try:
         # Getting project_id and additional information based on scenario_id

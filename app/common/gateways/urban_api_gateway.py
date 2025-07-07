@@ -2,7 +2,6 @@ import asyncio
 
 import geopandas as gpd
 import pandas as pd
-from lazy_object_proxy.utils import await_
 
 from app.common.api_handler.api_handler import APIHandler
 from app.common.exceptions.http_exception_wrapper import http_exception
