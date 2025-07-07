@@ -177,5 +177,44 @@ class UrbanAPIGateway:
             gpd.GeoDataFrame: A GeoDataFrame containing the territories of the territory in 4326 crs.
         """
 
-        resp = await self.api_handler.get(f"/api/v1/territories/{territories_ids}")
+        resp = await self.api_handler.get(
+            f"/api/v1/territories/{', '.join([str(i) for i in territories_ids])}",
+            params={
+                "centers_only": centers_only
+            }
+        )
         return gpd.GeoDataFrame.from_features(resp, crs=4326)
+
+    async def get_subterritories_ids_for_ter_ids(
+            self,
+            territories_ids: list[int],
+            get_all_levels: bool = False,
+            cities_only: bool = False
+    ) -> list[int]:
+        """
+        Function retrieves subterritories IDs for a given list of territory IDs.
+        Args:
+            territories_ids (list[int]): The IDs of the territories.
+            get_all_levels (bool): Whether to get all levels of subterritories. Defaults to False.
+            cities_only (bool): Whether to return only cities. Defaults to False.
+        Returns:
+            list[int]: A list of subterritories IDs.
+        Raises:
+            Any HTTP from Urban API.
+        """
+
+        tasks = [
+            self.api_handler.get(
+                "/api/v1/all_territories_without_geometry",
+                params={
+                    "parent_id": ter_id,
+                    "get_all_levels": get_all_levels,
+                    "cities_only": cities_only
+                }
+            ) for ter_id in territories_ids
+        ]
+        territories = await asyncio.gather(*tasks)
+        res = []
+        for i in territories:
+            res += [ter["territory_id"] for ter in i]
+        return res
