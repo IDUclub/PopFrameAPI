@@ -5,7 +5,7 @@ import pandas as pd
 
 from app.common.api_handler.api_handler import APIHandler
 
-SIMULTANIOUS_CONNECTIONS = 40
+SIMULTANIOUS_CONNECTIONS = 10
 
 
 class TownsAPIService:
