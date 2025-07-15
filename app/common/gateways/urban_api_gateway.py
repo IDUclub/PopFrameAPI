@@ -48,12 +48,13 @@ class UrbanAPIGateway:
                 "/api/v1/territory/indicator_values",
                 params={"parent_id": parent_id, "indicator_ids": 1},
             )
-            child_gdf = gpd.GeoDataFrame.from_features(child_gdf_resp, crs=4326)
-            child_gdf["parent_territory_id"] = parent_id
-            child_gdf["parent_name"] = gdf.loc[
-                gdf["territory_id"] == parent_id, "name"
-            ].iloc[0]
-            all_gdfs.append(child_gdf)
+            if child_gdf_resp["features"]:
+                child_gdf = gpd.GeoDataFrame.from_features(child_gdf_resp, crs=4326)
+                child_gdf["parent_territory_id"] = parent_id
+                child_gdf["parent_name"] = gdf.loc[
+                    gdf["territory_id"] == parent_id, "name"
+                ].iloc[0]
+                all_gdfs.append(child_gdf)
         res_gdf = pd.concat(all_gdfs, ignore_index=True)
         res_gdf["population"] = res_gdf["indicators"].apply(lambda x: x[0].get("value"))
         return res_gdf
