@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from popframe.method.aglomeration import AgglomerationBuilder
+from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 
 from app.common.models.popframe_models.popframe_models_service import \

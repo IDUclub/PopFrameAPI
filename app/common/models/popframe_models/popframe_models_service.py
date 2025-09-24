@@ -3,7 +3,7 @@ import json
 import geopandas as gpd
 import pandas as pd
 from loguru import logger
-from popframe.method.aglomeration import AgglomerationBuilder
+from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 from popframe.models.region import Region
 from popframe.preprocessing.level_filler import LevelFiller
