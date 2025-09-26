@@ -236,7 +236,7 @@ class TownsAPIService:
                 columns=[i for i in some_data.columns if "comm" in i or "loc" in i]
             )
             some_data[some_data.columns] = some_data.apply(
-                lambda x: x[0][0] if not pd.isna(x[0][0]) else 0
+                lambda x: x.iloc[0] if not pd.isna(x.iloc[0]) else 0
             )
             some_data["parent_id"] = [row["territory_id"]]
             return some_data.iloc[0]
