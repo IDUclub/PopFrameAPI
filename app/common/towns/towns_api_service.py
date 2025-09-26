@@ -30,6 +30,15 @@ class TownsAPIService:
         self.townsnet_api_handler = townsnet_api_handler
         self.socdemo_api_handler = socdemo_api_handler
 
+    async def get_soc_groups(self) -> list[dict[str, str | int]]:
+        """
+        Function retrieves all socgroups from urban api.
+        Returns:
+            list[dict[str, str | int]]: List of socgroups with if and name in keys.
+        """
+
+        return await self.urban_api_handler.get(f"/api/v1/social_groups")
+
     async def get_all_regions(self) -> list[int]:
         """
         Function retrieves all regions from Urban API.
@@ -204,99 +213,12 @@ class TownsAPIService:
         ter_city_map = await get_cities_map_for_ter(filtered_tree_data, limit_ids)
         return ter_city_map
 
-    async def get_socdemo_indicators(
-        self, territories_gdf: gpd.GeoDataFrame, region_id: int
-    ) -> gpd.GeoDataFrame:
-        """
-        Retrieves soc demo indicators for a given territory.
-        Returns passed GeoDataFrame with soc demo indicators.
-        Args:
-            territories_gdf (gpd.GeoDataFrame): GeoDataFrame containing the territories,
-            containing column 'territory_id'.
-            region_id (int): Region ID to extract child territories for.
-        Returns:
-            gpd.GeoDataFrame: A GeoDataFrame with soc demo indicators.
-        Raises:
-            Any HTTP exception from Urban API.
-        """
-
-        def _parse_soc_demo_response(row: pd.Series) -> pd.Series:
-            """
-            Parses the soc demo response and returns a Series with the relevant data.
-            Args:
-                row: pd.Series: A row from the DataFrame containing the soc demo response and territory_id.
-            Returns:
-                pd.Series: A Series containing the parsed soc demo data.
-            Raises:
-                None
-            """
-
-            some_data = pd.json_normalize(row["temp_socdemo_dict"], sep="_")
-            some_data.drop(
-                columns=[i for i in some_data.columns if "comm" in i or "loc" in i]
-            )
-            some_data[some_data.columns] = some_data.apply(
-                lambda x: x[0][0] if not pd.isna(x[0][0]) else 0
-            )
-            some_data["parent_id"] = [row["territory_id"]]
-            return some_data.iloc[0]
-
-        sub_territories = await self.get_territories_for_region(
-            region_id, level=3, with_geometry=False
-        )
-        task_list = [
-            self.socdemo_api_handler.get(
-                "/api/regions/values_identities", params={"territory_id": territory_id}
-            )
-            for territory_id in sub_territories["territory_id"]
-        ]
-
-        # TODO Remove when socdemo will be available for all territories
-        region_hierarchy = await self.get_territories_hierarchy(region_id)
-        city_ter_map = await self.create_hierarchy_map_from_level_to_city(
-            region_hierarchy,
-            target_level=3,
-            limit_ids=territories_gdf["territory_id"].to_list(),
-        )
-
-        territories_gdf["3_level_parent_id"] = territories_gdf["territory_id"].map(
-            city_ter_map
-        )
-
-        temp_soc_demo_resp_list = []
-        for i in range(0, len(task_list), SIMULTANIOUS_CONNECTIONS):
-            temp_soc_demo_resp_list += await asyncio.gather(
-                *task_list[i : i + SIMULTANIOUS_CONNECTIONS]
-            )
-        sub_territories["temp_socdemo_dict"] = temp_soc_demo_resp_list
-        soc_demo = await asyncio.to_thread(
-            sub_territories[["territory_id", "temp_socdemo_dict"]].apply,
-            _parse_soc_demo_response,
-            axis=1,
-        )
-        territories_gdf = pd.merge(
-            territories_gdf, soc_demo, left_on="3_level_parent_id", right_on="parent_id"
-        )
-        territories_gdf.drop(
-            columns=[
-                "territory_type",
-                "parent",
-                "created_at",
-                "updated_at",
-                "properties",
-                "parent_id_x",
-                "parent_id_y",
-            ],
-            inplace=True,
-        )
-        territories_gdf.rename(columns={"3_level_parent_id": "parent_id"}, inplace=True)
-        return gpd.GeoDataFrame(territories_gdf, geometry="geometry", crs=4326)
-
-    async def get_townsnet_prov(self, territory_id: int) -> gpd.GeoDataFrame:
+    async def get_townsnet_prov(self, territory_id: int, social_group_id: int) -> gpd.GeoDataFrame:
         """
         Retrieves townsnet prov for a given territory.
         Args:
             territory_id (int): The ID of the territory.
+            social_group_id (int): The ID of the social group.
         Returns:
             gpd.GeoDataFrame: A GeoDataFrame with townsnet prov data.
         Raises:
@@ -305,6 +227,9 @@ class TownsAPIService:
 
         response = await self.townsnet_api_handler.get(
             f"/provision/{territory_id}/get_evaluation",
+            params={
+                "social_group_id": social_group_id,
+            }
         )
 
         return gpd.GeoDataFrame.from_features(response, crs=4326)

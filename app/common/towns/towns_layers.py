@@ -1,6 +1,7 @@
+import asyncio
+
 import geopandas as gpd
 import pandas as pd
-from lazy_object_proxy.utils import await_
 from loguru import logger
 from pyogrio.errors import DataSourceError
 
@@ -28,8 +29,36 @@ class TownsLayers:
         self.towns_api_service = towns_api_service
         self.towns_caching_service = towns_caching_service
 
-    async def _retrieve_towns_for_region(self, region_id: int):
+    async def _retrieve_towns_for_region(self, region_id) -> gpd.GeoDataFrame:
+        """
+        Function to retrieve towns for a given region.
+        Args:
+            region_id (str): Region ID.
+        Returns:
+            gpd.GeoDataFrame: A GeoDataFrame containing towns for a given region with formed data.
+        """
 
+        def _rename_prov_columns(df: pd.DataFrame, group_name: str) -> pd.DataFrame:
+            """
+            Function renames columns to spatial inequality acceptable format
+            Args:
+                df (pd.DataFrame): Dataframe to rename
+                group_name (str): Name of column to rename
+            Returns:
+                pd.DataFrame: Dataframe with renamed columns
+            """
+
+            return df[["Обеспеченность", "basic", "additional", "comfort"]].rename(
+                columns={
+                    "Обеспеченность": f"{group_name} - Неравенство",
+                    "basic": f"{group_name} - Неравенство - basic",
+                    "additional": f"{group_name} - Неравенство - additional",
+                    "comfort": f"{group_name} - Неравенство - comfort",
+                }
+            )
+
+
+        soc_groups = await self.towns_api_service.get_soc_groups()
         towns = await self.towns_api_service.get_territories_for_region(
             region_id, get_all_levels=True, cities_only=True, centers_only=True
         )
@@ -43,20 +72,16 @@ class TownsLayers:
             .astype(bool)
         )
         towns["id"] = towns["territory_id"].copy()
-        towns = await self.towns_api_service.get_socdemo_indicators(towns, region_id)
-        townsnet_prov_data = await self.towns_api_service.get_townsnet_prov(region_id)
-        towns = pd.merge(
-            towns,
-            townsnet_prov_data[["territory_id", "basic", "additional", "comfort"]],
-            left_on="territory_id",
-            right_on="territory_id",
-            how="left",
-        )
-        towns["provision"] = towns[["basic", "additional", "comfort"]].mean(axis=1)
-        towns.set_index("id", drop=False, inplace=True)
-        towns = gpd.GeoDataFrame(towns, geometry="geometry", crs=4326)
-        self.towns_caching_service.cache_gdf(region_id, towns)
-        return towns
+
+        townsnet_prov_tasks = [self.towns_api_service.get_townsnet_prov(region_id, soc_group_info["soc_group_id"]) for soc_group_info in soc_groups]
+        townsnet_prov_data = await asyncio.gather(*townsnet_prov_tasks)
+        combined_towns_layer = pd.concat([_rename_prov_columns(townsnet_prov, soc_group_data["name"]) for townsnet_prov, soc_group_data in zip(townsnet_prov_data, soc_groups)], axis=1)
+        target_columns = [c for c in combined_towns_layer.columns if "Неравенство" in c]
+        combined_towns_layer[target_columns] = 1 - combined_towns_layer[target_columns]
+        combined_towns_layer["Пространственное неравенство"] = combined_towns_layer[target_columns].mean(axis=1).round(2)
+        result = pd.concat([towns, combined_towns_layer], axis=1)
+        self.towns_caching_service.cache_gdf(region_id, result)
+        return result
 
     async def get_towns(self, region_id: int, force: bool = False) -> gpd.GeoDataFrame:
         """
