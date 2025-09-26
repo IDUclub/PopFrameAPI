@@ -1,10 +1,10 @@
-import asyncio
 import json
 
 from fastapi import APIRouter, Depends
 from loguru import logger
 from pydantic_geojson import FeatureCollectionModel
 
+from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.anchor_settlement import AnchorSettlementBuilder
 from popframe.method.spatial_inequality import SpatialInequalityCalculator
 
@@ -12,6 +12,7 @@ from app.common.models.popframe_models.popframe_models_service import \
     pop_frame_model_service
 from app.dependencies import http_exception, towns_layers, urban_api_gateway
 from app.common.auth.bearer import verify_bearer_token
+
 
 inequality_router = APIRouter(prefix="/inequality", tags=["inequality"])
 
@@ -36,26 +37,20 @@ async def get_spatial_inequality(region_id: int, level: int | None = None):
     logger.info(f"Processing spatial inequality for region {region_id}")
     model = await pop_frame_model_service.get_model(region_id)
     towns = await towns_layers.get_towns(region_id)
-    calculator = SpatialInequalityCalculator(region=model.region_model)
-    spatial_inequality = calculator.calculate_spatial_inequality(towns)
     if level is not None and level < towns["level"].max():
         aggregate_territories = (
             await towns_layers.towns_api_service.get_territories_for_region(
                 region_id, get_all_levels=True, level=level
             )
         )
-
-        polygon_spatial_inequality, stats_json = (
-            calculator.calculate_polygon_spatial_inequality(
-                spatial_inequality, aggregate_territories
-            )
-        )
+        calculator = SpatialInequalityCalculator(region=model.region_model)
+        polygon_spatial_inequality = calculator.transfer_inequality_metrics_to_polygons(towns, aggregate_territories)[0]
         logger.info(
             f"Spatial inequality processed successfully for region {region_id} and level {level}"
         )
         return json.loads(polygon_spatial_inequality.to_crs(4326).to_json())
     logger.info(f"Spatial inequality processed successfully for region {region_id}")
-    return json.loads(spatial_inequality.to_crs(4326).to_json())
+    return json.loads(towns.to_crs(4326).to_json())
 
 
 @inequality_router.get("/context_inequality")
@@ -90,17 +85,12 @@ async def get_context_inequality(
         cities_only=True
     )
     towns = towns[towns.index.isin(context_towns_ids)]
-    calculator = SpatialInequalityCalculator(region=model.region_model)
-    spatial_inequality = calculator.calculate_spatial_inequality(towns)
     aggregate_territories = await urban_api_gateway.get_territories_gdf_by_ids(project_info["properties"]["context"])
-    context_poly_spatial_inequality, stats_json = (
-        calculator.calculate_polygon_spatial_inequality(
-            spatial_inequality, aggregate_territories
-        )
-    )
+    calculator = SpatialInequalityCalculator(region=model.region_model)
+    aggregated_inequality = calculator.transfer_inequality_metrics_to_polygons(towns, aggregate_territories)[0]
     return {
-        "polygon_spatial_inequality": json.loads(context_poly_spatial_inequality.to_crs(4326).to_json()),
-        "context_towns_spatial_inequality": json.loads(spatial_inequality.to_crs(4326).to_json()),
+        "polygon_spatial_inequality": json.loads(aggregated_inequality.to_crs(4326).to_json()),
+        "context_towns_spatial_inequality": json.loads(towns.to_crs(4326).to_json()),
     }
 
 @inequality_router.put("/cache_towns/{region_id}")
