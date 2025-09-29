@@ -79,9 +79,7 @@ class UrbanAPIGateway:
         return resp[0]["indicators"][0]["value"]
 
     async def get_project_id_by_scenario_id(
-            self,
-            scenario_id: int,
-            token: str | None = None
+        self, scenario_id: int, token: str | None = None
     ) -> int:
         """
         Function retrieves project id by scenario id by its ID.
@@ -96,8 +94,7 @@ class UrbanAPIGateway:
 
         headers = {"Authorization": f"Bearer {token}"} if token else None
         resp = await self.api_handler.get(
-            f"/api/v1/scenarios/{scenario_id}",
-            headers=headers
+            f"/api/v1/scenarios/{scenario_id}", headers=headers
         )
         if resp:
             return resp["project_id"]["project_id"]
@@ -108,13 +105,13 @@ class UrbanAPIGateway:
                 "token": token,
                 "scenario_id": scenario_id,
             },
-            _detail={}
+            _detail={},
         )
 
     async def get_project_info(
-            self,
-            project_id: int,
-            token: str | None = None,
+        self,
+        project_id: int,
+        token: str | None = None,
     ) -> dict:
         """
         Function retrieves project info by its ID.
@@ -129,8 +126,7 @@ class UrbanAPIGateway:
 
         headers = {"Authorization": f"Bearer {token}"} if token else None
         resp = await self.api_handler.get(
-            f"/api/v1/projects/{project_id}",
-            headers=headers
+            f"/api/v1/projects/{project_id}", headers=headers
         )
         if resp:
             return resp
@@ -141,13 +137,13 @@ class UrbanAPIGateway:
                 "token": token,
                 "project_id": project_id,
             },
-            _detail={}
+            _detail={},
         )
 
     async def get_project_info_by_scenario(
-            self,
-            scenario_id: int,
-            token: str | None=None,
+        self,
+        scenario_id: int,
+        token: str | None = None,
     ) -> dict:
         """
         Function retrieves project info for a given scenario by its ID.
@@ -164,9 +160,9 @@ class UrbanAPIGateway:
         return await self.get_project_info(project_id, token)
 
     async def get_territories_gdf_by_ids(
-            self,
-            territories_ids: list[str],
-            centers_only: bool = False,
+        self,
+        territories_ids: list[str],
+        centers_only: bool = False,
     ) -> gpd.GeoDataFrame:
         """
         Function retrieves territories for a given list of IDs.
@@ -179,17 +175,15 @@ class UrbanAPIGateway:
 
         resp = await self.api_handler.get(
             f"/api/v1/territories/{', '.join([str(i) for i in territories_ids])}",
-            params={
-                "centers_only": centers_only
-            }
+            params={"centers_only": centers_only},
         )
         return gpd.GeoDataFrame.from_features(resp, crs=4326)
 
     async def get_subterritories_ids_for_ter_ids(
-            self,
-            territories_ids: list[int],
-            get_all_levels: bool = False,
-            cities_only: bool = False
+        self,
+        territories_ids: list[int],
+        get_all_levels: bool = False,
+        cities_only: bool = False,
     ) -> list[int]:
         """
         Function retrieves subterritories IDs for a given list of territory IDs.
@@ -209,9 +203,10 @@ class UrbanAPIGateway:
                 params={
                     "parent_id": ter_id,
                     "get_all_levels": get_all_levels,
-                    "cities_only": cities_only
-                }
-            ) for ter_id in territories_ids
+                    "cities_only": cities_only,
+                },
+            )
+            for ter_id in territories_ids
         ]
         territories = await asyncio.gather(*tasks)
         res = []

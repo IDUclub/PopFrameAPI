@@ -2,18 +2,20 @@ import sys
 
 import geopandas as gpd
 import requests
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from loguru import logger
 from popframe.method.territory_evaluation import TerritoryEvaluation
 from pydantic_geojson import PolygonModel
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
-    PopFrameAPIModel
+from app.common.auth.bearer import verify_bearer_token
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
+    PopFrameAPIModel,
+)
 from app.dependencies import config
 from app.models.models import EvaluateTerritoryLocationResult
-from app.common.auth.bearer import verify_bearer_token
 
 territory_router = APIRouter(prefix="/territory", tags=["Territory Evaluation"])
 

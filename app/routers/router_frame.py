@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
-    PopFrameAPIModel
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
+    PopFrameAPIModel,
+)
 
 network_router = APIRouter(prefix="/population", tags=["Population Frame"])
 

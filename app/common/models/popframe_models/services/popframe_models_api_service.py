@@ -11,8 +11,11 @@ import requests
 from loguru import logger
 from shapely.geometry import shape
 
-from app.dependencies import (http_exception, transportframe_api_handler,
-                              urban_api_handler)
+from app.dependencies import (
+    http_exception,
+    transportframe_api_handler,
+    urban_api_handler,
+)
 
 
 class PopFrameModelApiService:

@@ -3,19 +3,21 @@ import sys
 import geopandas as gpd
 import pandas as pd
 import requests
-from fastapi import (APIRouter, BackgroundTasks, Depends, HTTPException, Query)
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from loguru import logger
 from popframe.method.city_evaluation import CityPopulationScorer
 from popframe.method.territory_evaluation import TerritoryEvaluation
 from pydantic_geojson import PolygonModel
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
-    PopFrameAPIModel
+from app.common.auth.bearer import verify_bearer_token
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
+    PopFrameAPIModel,
+)
 from app.dependencies import config, urban_api_gateway
 from app.models.models import PopulationCriterionResult
-from app.common.auth.bearer import verify_bearer_token
 
 population_router = APIRouter(prefix="/population", tags=["Population Criterion"])
 

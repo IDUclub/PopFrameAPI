@@ -6,12 +6,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from loguru import logger
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
 from app.common.exceptions.exception_handler import ExceptionHandlerMiddleware
-from app.routers import (router_agglomeration, router_frame, router_inequality,
-                         router_landuse, router_popframe, router_population,
-                         router_territory)
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
+from app.routers import (
+    router_agglomeration,
+    router_frame,
+    router_inequality,
+    router_landuse,
+    router_popframe,
+    router_population,
+    router_territory,
+)
 from app.routers.router_popframe_models import model_calculator_router
 
 from .common.exceptions.http_exception_wrapper import http_exception
@@ -50,7 +57,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="PopFrame API",
     description="API for PopFrame service, handling territory evaluation, population criteria, network frame, and land use data.",
-    version="3.0.0",
+    version="3.0.1",
 )
 
 # Add CORS middleware

@@ -6,12 +6,14 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from loguru import logger
 from popframe.method.territory_evaluation import TerritoryEvaluation
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import \
-    PopFrameAPIModel
-from app.dependencies import config
 from app.common.auth.bearer import verify_bearer_token
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
+from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
+    PopFrameAPIModel,
+)
+from app.dependencies import config
 
 popframe_router = APIRouter(prefix="/popframe", tags=["PopFrame Evaluation"])
 
@@ -129,7 +131,9 @@ async def process_combined_evaluation(
                     f"Тело ответа: {indicators_response.text}"
                 )
                 raise Exception("Ошибка при сохранении показателей (население)")
-            logger.info(f"Saved population indicators values for scenario {project_scenario_id}")
+            logger.info(
+                f"Saved population indicators values for scenario {project_scenario_id}"
+            )
 
     except Exception as e:
         logger.exception(f"Ошибка при комбинированной обработке: {e}")
