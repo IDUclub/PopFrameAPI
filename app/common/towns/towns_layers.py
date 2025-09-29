@@ -72,15 +72,34 @@ class TownsLayers:
         )
         towns["id"] = towns["territory_id"].copy()
 
-        townsnet_prov_tasks = [self.towns_api_service.get_townsnet_prov(region_id, soc_group_info["soc_group_id"]) for soc_group_info in soc_groups]
+        townsnet_prov_tasks = [
+            self.towns_api_service.get_townsnet_prov(
+                region_id, soc_group_info["soc_group_id"]
+            )
+            for soc_group_info in soc_groups
+        ]
         townsnet_prov_data = await asyncio.gather(*townsnet_prov_tasks)
-        combined_towns_layer = pd.concat([_rename_prov_columns(townsnet_prov, soc_group_data["name"]) for townsnet_prov, soc_group_data in zip(townsnet_prov_data, soc_groups)], axis=1)
+        combined_towns_layer = pd.concat(
+            [
+                _rename_prov_columns(townsnet_prov, soc_group_data["name"])
+                for townsnet_prov, soc_group_data in zip(townsnet_prov_data, soc_groups)
+            ],
+            axis=1,
+        )
         target_columns = [c for c in combined_towns_layer.columns if "Неравенство" in c]
-        combined_towns_layer[target_columns] = (1 - combined_towns_layer[target_columns])
-        combined_towns_layer["Пространственное неравенство"] = combined_towns_layer[target_columns].mean(axis=1).round(2)
+        combined_towns_layer[target_columns] = 1 - combined_towns_layer[target_columns]
+        combined_towns_layer["Пространственное неравенство"] = (
+            combined_towns_layer[target_columns].mean(axis=1).round(2)
+        )
         result = pd.concat([towns, combined_towns_layer], axis=1)
         result.set_index("id", inplace=True, drop=True)
-        result[target_columns] = result[target_columns].apply(lambda x: [round(i, 2) if i else i for i in x] if float in list(set(x.apply(type))) else x)
+        result[target_columns] = result[target_columns].apply(
+            lambda x: (
+                [round(i, 2) if i else i for i in x]
+                if float in list(set(x.apply(type)))
+                else x
+            )
+        )
         self.towns_caching_service.cache_gdf(region_id, result)
         return result
 

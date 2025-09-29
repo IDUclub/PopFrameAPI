@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
 from app.common.storage.geoserver.geoserver_dto import PopFrameGeoserverDTO
 from app.dependencies import geoserver_storage
 from app.dto import RegionAgglomerationDTO
@@ -54,7 +55,9 @@ async def get_agglomeration_endpoint(
         builder = AgglomerationBuilder(region=popframe_region_model.region_model)
         agglomeration_gdf = builder.get_agglomerations(time=agglomerations_params.time)
         agglomeration_gdf.to_crs(4326, inplace=True)
-        agglomeration_gdf["num_core_cities"] = agglomeration_gdf["core_cities"].apply(lambda x: len(x.split(",")) if x else 0)
+        agglomeration_gdf["num_core_cities"] = agglomeration_gdf["core_cities"].apply(
+            lambda x: len(x.split(",")) if x else 0
+        )
         result = json.loads(agglomeration_gdf.to_json())
         return result
     except Exception as e:

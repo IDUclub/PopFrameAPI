@@ -54,7 +54,7 @@ class APIHandler:
         """
 
         if response.status in (200, 201):
-            result =  await response.json(content_type="application/json")
+            result = await response.json(content_type="application/json")
             return result
         elif response.status == 500:
             if response.content_type == "application/json":

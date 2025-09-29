@@ -213,7 +213,9 @@ class TownsAPIService:
         ter_city_map = await get_cities_map_for_ter(filtered_tree_data, limit_ids)
         return ter_city_map
 
-    async def get_townsnet_prov(self, territory_id: int, social_group_id: int) -> gpd.GeoDataFrame:
+    async def get_townsnet_prov(
+        self, territory_id: int, social_group_id: int
+    ) -> gpd.GeoDataFrame:
         """
         Retrieves townsnet prov for a given territory.
         Args:
@@ -229,7 +231,7 @@ class TownsAPIService:
             f"/provision/{territory_id}/get_evaluation",
             params={
                 "social_group_id": social_group_id,
-            }
+            },
         )
 
         return gpd.GeoDataFrame.from_features(response, crs=4326)

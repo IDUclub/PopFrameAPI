@@ -3,8 +3,9 @@ import asyncio
 from fastapi import APIRouter, BackgroundTasks
 from loguru import logger
 
-from app.common.models.popframe_models.popframe_models_service import \
-    pop_frame_model_service
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
 from app.dependencies import towns_layers
 
 recalculating = False
