@@ -1,10 +1,8 @@
-import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
-from loguru import logger
 
 from app.common.exceptions.exception_handler import ExceptionHandlerMiddleware
 from app.common.models.popframe_models.popframe_models_service import (
@@ -22,27 +20,7 @@ from app.routers import (
 from app.routers.router_popframe_models import model_calculator_router
 
 from .common.exceptions.http_exception_wrapper import http_exception
-from .dependencies import config, towns_layers
-
-logger.remove()
-log_level = "DEBUG"
-log_format = "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <yellow>Line {line: >4} ({file}):</yellow> <b>{message}</b>"
-logger.add(
-    sys.stderr,
-    level=log_level,
-    format=log_format,
-    colorize=True,
-    backtrace=True,
-    diagnose=True,
-)
-logger.add(
-    ".log",
-    level=log_level,
-    format=log_format,
-    colorize=False,
-    backtrace=True,
-    diagnose=True,
-)
+from .dependencies import broker_service, config, towns_layers
 
 
 @asynccontextmanager
@@ -50,7 +28,9 @@ async def lifespan(app: FastAPI):
     if not config.get("APP_ENV") == "development":
         await pop_frame_model_service.load_and_cache_all_models_on_startup()
         await towns_layers.cache_all_towns()
+    await broker_service.register_and_start()
     yield
+    await broker_service.stop()
 
 
 app = FastAPI(
