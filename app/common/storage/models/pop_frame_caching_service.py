@@ -1,20 +1,30 @@
 import asyncio
 from pathlib import Path
 
+from iduconfig import Config
 from loguru import logger
 from popframe.models.region import Region
 
-from app.dependencies import config, http_exception
+from app.common.exceptions.http_exception_wrapper import http_exception
 
-from .caching_serivce import CachingService
+from .caching_service import CachingService
 
 
 class PopFrameCachingService(CachingService):
-    """Popframe model caching service"""
+    """
+    Popframe model caching service. Inherits from CachingService from caching_serivce.py
+    Attributes:
+        config (Config): configuration instance from IDUConfig Config class
+    """
 
-    def __init(self, popframe_cache_path: Path):
+    def __init__(
+        self,
+        popframe_cache_path: Path,
+        config: Config,
+    ):
 
         super().__init__(popframe_cache_path)
+        self.config = config
 
     async def check_path(self, region_id: int) -> bool:
         """
@@ -96,8 +106,3 @@ class PopFrameCachingService(CachingService):
                 _input={"filepath": model_to_load},
                 _detail={"Error": repr(e)},
             )
-
-
-pop_frame_caching_service = PopFrameCachingService(
-    Path().absolute() / config.get("COMMON_CACHE") / config.get("POPFRAME_MODEL_CACHE")
-)

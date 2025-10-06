@@ -1,6 +1,10 @@
 from iduconfig import Config
 from otteroad import KafkaConsumerService, KafkaProducerClient
 
+from app.common.models.popframe_models.popframe_models_service import (
+    PopFrameModelsService,
+)
+
 from .handlers import ProjectHandler
 
 
@@ -10,21 +14,21 @@ class BrokerService:
         self,
         config: Config,
         broker_client: KafkaConsumerService,
-        broker_producer: KafkaProducerClient,
+        pop_frame_model_service: PopFrameModelsService,
     ):
 
         self.config = config
         self.broker_client = broker_client
-        self.broker_producer = broker_producer
+        self.pop_frame_model_service = pop_frame_model_service
 
     async def register_and_start(self):
 
-        self.broker_client.register_handler(ProjectHandler(self.config))
-        self.broker_client.add_worker(topics=["scenario.event"])
+        self.broker_client.register_handler(
+            ProjectHandler(self.config, self.pop_frame_model_service)
+        )
+        self.broker_client.add_worker(topics=["urban.events"])
         await self.broker_client.start()
-        await self.broker_producer.start()
 
     async def stop(self):
 
         await self.broker_client.stop()
-        await self.broker_producer.close()

@@ -8,13 +8,10 @@ from popframe.method.territory_evaluation import TerritoryEvaluation
 from pydantic_geojson import PolygonModel
 
 from app.common.auth.bearer import verify_bearer_token
-from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
-)
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
-from app.dependencies import config
+from app.dependencies import config, pop_frame_model_service
 from app.models.models import EvaluateTerritoryLocationResult
 
 territory_router = APIRouter(prefix="/territory", tags=["Territory Evaluation"])

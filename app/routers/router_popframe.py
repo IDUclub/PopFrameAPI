@@ -7,13 +7,10 @@ from loguru import logger
 from popframe.method.territory_evaluation import TerritoryEvaluation
 
 from app.common.auth.bearer import verify_bearer_token
-from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
-)
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
-from app.dependencies import config
+from app.dependencies import config, pop_frame_model_service
 
 popframe_router = APIRouter(prefix="/popframe", tags=["PopFrame Evaluation"])
 

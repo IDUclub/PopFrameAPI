@@ -7,13 +7,10 @@ from popframe.method.city_evaluation import CityPopulationScorer
 from popframe.method.territory_evaluation import TerritoryEvaluation
 
 from app.common.auth.bearer import verify_bearer_token
-from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
-)
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
-from app.dependencies import config, urban_api_gateway
+from app.dependencies import config, pop_frame_model_service, urban_api_gateway
 
 population_router = APIRouter(prefix="/population", tags=["Population Criterion"])
 

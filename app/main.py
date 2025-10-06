@@ -3,11 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
+from otteroad import (
+    KafkaConsumerService,
+    KafkaConsumerSettings,
+    KafkaProducerClient,
+    KafkaProducerSettings,
+)
 
 from app.common.exceptions.exception_handler import ExceptionHandlerMiddleware
-from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
-)
 from app.routers import (
     router_agglomeration,
     router_frame,
@@ -19,15 +22,19 @@ from app.routers import (
 )
 from app.routers.router_popframe_models import model_calculator_router
 
+from .broker.broker_service import BrokerService
 from .common.exceptions.http_exception_wrapper import http_exception
-from .dependencies import broker_service, config, towns_layers
+from .dependencies import config, pop_frame_model_service
+
+consumer_settings = KafkaConsumerSettings.from_env()
+
+broker_client = KafkaConsumerService(consumer_settings)
+broker_service = BrokerService(config, broker_client, pop_frame_model_service)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not config.get("APP_ENV") == "development":
-        await pop_frame_model_service.load_and_cache_all_models_on_startup()
-        await towns_layers.cache_all_towns()
+
     await broker_service.register_and_start()
     yield
     await broker_service.stop()

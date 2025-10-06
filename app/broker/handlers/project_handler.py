@@ -1,25 +1,25 @@
-from typing import Awaitable, Callable
-
 from iduconfig import Config
 from loguru import logger
 from otteroad.consumer import BaseMessageHandler
 from otteroad.models import ProjectCreated
 
 from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
+    PopFrameModelsService,
 )
 from app.routers.router_population import process_population_criterion
 
 
-class ProjectHandler(BaseMessageHandler):
+class ProjectHandler(BaseMessageHandler[ProjectCreated]):
 
     def __init__(
         self,
         config: Config,
+        pop_frame_model_service: PopFrameModelsService,
     ):
 
         super().__init__()
         self.config = config
+        self.pop_frame_model_service = pop_frame_model_service
 
     # TODO revise ctx
     async def handle(self, event: ProjectCreated, ctx):
@@ -35,7 +35,7 @@ class ProjectHandler(BaseMessageHandler):
         logger.info(f"Started processing event {repr(event)}")
         try:
             if isinstance(event, ProjectCreated):
-                model = pop_frame_model_service.get_model(event.territory_id)
+                model = await self.pop_frame_model_service.get_model(event.territory_id)
                 await process_population_criterion(
                     model,
                     event.base_scenario_id,
