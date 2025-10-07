@@ -53,7 +53,7 @@ async def process_population_criterion(
 ):
     try:
         scenario_response = requests.get(
-            f"{config.get('URBAN_API')}/scenarios/{project_scenario_id}",
+            f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
         if scenario_response.status_code != 200:
@@ -65,7 +65,7 @@ async def process_population_criterion(
             raise Exception("Project ID is missing in scenario data.")
 
         territory_response = requests.get(
-            f"{config.get('URBAN_API')}/projects/{project_id}/territory",
+            f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
             headers={"Authorization": f"Bearer {token}"},
         )
         if territory_response.status_code != 200:
@@ -96,7 +96,7 @@ async def process_population_criterion(
             }
 
             indicators_response = requests.post(
-                f"{config.get('URBAN_API')}/scenarios/indicators_values",
+                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
                 headers={"Authorization": f"Bearer {token}"},
                 json=indicator_data,
             )

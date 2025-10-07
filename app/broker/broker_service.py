@@ -26,7 +26,7 @@ class BrokerService:
         self.broker_client.register_handler(
             ProjectHandler(self.config, self.pop_frame_model_service)
         )
-        self.broker_client.add_worker(topics=["urban.events"])
+        self.broker_client.add_worker(topics=["scenario.events"])
         await self.broker_client.start()
 
     async def stop(self):
