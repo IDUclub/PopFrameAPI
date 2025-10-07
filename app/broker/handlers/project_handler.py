@@ -34,18 +34,13 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
 
         logger.info(f"Started processing event {repr(event)}")
         try:
-            if isinstance(event, ProjectCreated):
-                model = await self.pop_frame_model_service.get_model(event.territory_id)
-                await process_population_criterion(
-                    model,
-                    event.base_scenario_id,
-                    self.config.get("URBAN_API_ACCESS_TOKEN"),
-                )
-                logger.info(f"Finished processing event {repr(event)}")
-            else:
-                raise NotImplementedError(
-                    f"Event type {type(event)} not supported for {type(self)} class"
-                )
+            model = await self.pop_frame_model_service.get_model(event.territory_id)
+            await process_population_criterion(
+                model,
+                event.base_scenario_id,
+                self.config.get("URBAN_API_ACCESS_TOKEN"),
+            )
+            logger.info(f"Finished processing event {repr(event)}")
         except Exception as e:
             logger.exception(f"ProjectHandler::handle: {repr(e)}")
             raise e
