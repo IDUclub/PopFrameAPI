@@ -6,8 +6,6 @@ from fastapi.responses import FileResponse, RedirectResponse
 from otteroad import (
     KafkaConsumerService,
     KafkaConsumerSettings,
-    KafkaProducerClient,
-    KafkaProducerSettings,
 )
 
 from app.common.exceptions.exception_handler import ExceptionHandlerMiddleware

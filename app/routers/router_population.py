@@ -51,64 +51,61 @@ async def get_population_criterion_score_endpoint(
 async def process_population_criterion(
     popframe_region_model: PopFrameAPIModel, project_scenario_id: int, token: str
 ):
-    try:
-        scenario_response = requests.get(
-            f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        if scenario_response.status_code != 200:
-            raise Exception("Ошибка при получении информации по сценарию")
 
-        scenario_data = scenario_response.json()
-        project_id = scenario_data.get("project", {}).get("project_id")
-        if project_id is None:
-            raise Exception("Project ID is missing in scenario data.")
+    scenario_response = requests.get(
+        f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if scenario_response.status_code != 200:
+        raise Exception("Ошибка при получении информации по сценарию")
 
-        territory_response = requests.get(
-            f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        if territory_response.status_code != 200:
-            raise Exception("Ошибка при получении геометрии территории")
+    scenario_data = scenario_response.json()
+    project_id = scenario_data.get("project", {}).get("project_id")
+    if project_id is None:
+        raise Exception("Project ID is missing in scenario data.")
 
-        territory_data = territory_response.json()
-        territory_geometry = territory_data["geometry"]
-        territory_feature = {
-            "type": "Feature",
-            "geometry": territory_geometry,
-            "properties": {},
+    territory_response = requests.get(
+        f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    if territory_response.status_code != 200:
+        raise Exception("Ошибка при получении геометрии территории")
+
+    territory_data = territory_response.json()
+    territory_geometry = territory_data["geometry"]
+    territory_feature = {
+        "type": "Feature",
+        "geometry": territory_geometry,
+        "properties": {},
+    }
+    polygon_gdf = gpd.GeoDataFrame.from_features([territory_feature], crs=4326)
+    polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
+
+    evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
+    result = evaluation.population_criterion(territories_gdf=polygon_gdf)
+
+    for res in result:
+        indicator_data = {
+            "indicator_id": 197,
+            "scenario_id": project_scenario_id,
+            "territory_id": None,
+            "hexagon_id": None,
+            "value": float(res["score"]),
+            "comment": res["interpretation"],
+            "information_source": "modeled PopFrame",
         }
-        polygon_gdf = gpd.GeoDataFrame.from_features([territory_feature], crs=4326)
-        polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
 
-        evaluation = TerritoryEvaluation(region=popframe_region_model.region_model)
-        result = evaluation.population_criterion(territories_gdf=polygon_gdf)
-
-        for res in result:
-            indicator_data = {
-                "indicator_id": 197,
-                "scenario_id": project_scenario_id,
-                "territory_id": None,
-                "hexagon_id": None,
-                "value": float(res["score"]),
-                "comment": res["interpretation"],
-                "information_source": "modeled PopFrame",
-            }
-
-            indicators_response = requests.put(
-                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
-                headers={"Authorization": f"Bearer {token}"},
-                json=indicator_data,
+        indicators_response = requests.put(
+            f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
+            headers={"Authorization": f"Bearer {token}"},
+            json=indicator_data,
+        )
+        if indicators_response.status_code not in (200, 201):
+            logger.exception(
+                f"Ошибка при сохранении показателей: {indicators_response.status_code}, "
+                f"Тело ответа: {indicators_response.text}"
             )
-            if indicators_response.status_code not in (200, 201):
-                logger.exception(
-                    f"Ошибка при сохранении показателей: {indicators_response.status_code}, "
-                    f"Тело ответа: {indicators_response.text}"
-                )
-                raise Exception("Ошибка при сохранении показателей")
-
-    except Exception as e:
-        logger.exception(f"Ошибка при обработке критерия по населению: {e}")
+            raise Exception("Ошибка при сохранении показателей")
 
 
 @population_router.post("/save_population_criterion")

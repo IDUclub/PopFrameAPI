@@ -14,3 +14,4 @@ pydantic_geojson~=0.2.0
 lazy-object-proxy~=1.12.0
 retrying~=1.4.2
 otteroad~=0.1.7
+prometheus-client~=0.23.1
