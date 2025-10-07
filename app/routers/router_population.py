@@ -95,7 +95,7 @@ async def process_population_criterion(
                 "information_source": "modeled PopFrame",
             }
 
-            indicators_response = requests.post(
+            indicators_response = requests.put(
                 f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
                 headers={"Authorization": f"Bearer {token}"},
                 json=indicator_data,
