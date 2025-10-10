@@ -32,7 +32,7 @@ async def process_combined_evaluation(
         headers={"Authorization": f"Bearer {token}"},
     )
     if scenario_response.status_code != 200:
-        raise Exception("Ошибка при получении информации по сценарию")
+        raise Exception("Error retrieving scenario information")
 
     scenario_data = scenario_response.json()
     project_id = scenario_data.get("project", {}).get("project_id")
@@ -44,7 +44,7 @@ async def process_combined_evaluation(
         headers={"Authorization": f"Bearer {token}"},
     )
     if territory_response.status_code != 200:
-        raise Exception("Ошибка при получении геометрии территории")
+        raise Exception("Error retrieving territory geometry")
 
     territory_data = territory_response.json()
     territory_geometry = territory_data["geometry"]
@@ -94,10 +94,10 @@ async def process_combined_evaluation(
         )
         if indicators_response.status_code not in (200, 201):
             logger.exception(
-                f"Ошибка при сохранении показателей (локация): {indicators_response.status_code}, "
-                f"Тело ответа: {indicators_response.text}"
+                f"Error saving indicators (population): {indicators_response.status_code}, "
+                f"Body response: {indicators_response.text}"
             )
-            raise Exception("Ошибка при сохранении показателей (локация)")
+            raise Exception("Error saving indicators (location)")
 
     population_results = evaluation.population_criterion(territories_gdf=polygon_gdf)
     for res in population_results:
@@ -119,10 +119,10 @@ async def process_combined_evaluation(
         )
         if indicators_response.status_code not in (200, 201):
             logger.exception(
-                f"Ошибка при сохранении показателей (население): {indicators_response.status_code}, "
-                f"Тело ответа: {indicators_response.text}"
+                f"Error saving indicators (population):: {indicators_response.status_code}, "
+                f"Body response: {indicators_response.text}"
             )
-            raise Exception("Ошибка при сохранении показателей (население)")
+            raise Exception("Error saving indicators (population):")
         logger.info(
             f"Saved population indicators values for scenario {project_scenario_id}"
         )

@@ -27,12 +27,12 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
         Function handles ProjectCreated events from broker
         Args:
             event (ProjectCreated): ProjectCreated event, should contain base_scenario attribute
-            ctx: None
+            ctx: Any additional context (not used here)
         Returns:
             None
         """
 
-        logger.info(f"Started processing event {repr(event)}")
+        logger.info("Started processing event {}", repr(event))
         model = await self.pop_frame_model_service.get_model(event.territory_id)
         await process_population_criterion(
             model,
