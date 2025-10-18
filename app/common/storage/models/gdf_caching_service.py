@@ -4,7 +4,7 @@ import geopandas as gpd
 import pandas as pd
 from pyogrio.errors import DataSourceError
 
-from .caching_serivce import CachingService
+from app.common.storage.models.caching_service import CachingService
 
 
 class GDFCachingService(CachingService):

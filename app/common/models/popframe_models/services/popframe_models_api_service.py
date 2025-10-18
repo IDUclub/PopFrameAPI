@@ -11,34 +11,36 @@ import requests
 from loguru import logger
 from shapely.geometry import shape
 
-from app.dependencies import (
-    http_exception,
-    transportframe_api_handler,
-    urban_api_handler,
-)
+from app.common.api_handler.api_handler import APIHandler
+from app.common.exceptions.http_exception_wrapper import http_exception
 
 
 class PopFrameModelApiService:
     """Class for external api services data retrieving"""
 
-    # ToDo processing database level changes
-    @staticmethod
-    async def get_regions() -> list[int]:
+    def __init__(
+        self, transportframe_api_handler: APIHandler, urban_api_handler: APIHandler
+    ):
+        self.transportframe_api_handler = transportframe_api_handler
+        self.urban_api_handler = urban_api_handler
+
+    # TODO processing database level changes
+    async def get_regions(self) -> list[int]:
         """
         Function retrieves all available regions
         Returns:
             list[int]: list of available regions as int id
         """
 
-        response = await urban_api_handler.get(
+        response = await self.urban_api_handler.get(
             endpoint_url="/api/v1/all_territories_without_geometry",
             params={"parent_id": 12639},
         )
         regions_id_list = [i["territory_id"] for i in response]
         return regions_id_list
 
-    @staticmethod
     async def get_region_borders(
+        self,
         region_id: int,
     ) -> gpd.GeoDataFrame:
         """
@@ -52,7 +54,7 @@ class PopFrameModelApiService:
             Any, error from urban api
         """
 
-        response = await urban_api_handler.get(
+        response = await self.urban_api_handler.get(
             endpoint_url=f"/api/v1/territory/{region_id}",
         )
         try:
@@ -70,8 +72,9 @@ class PopFrameModelApiService:
                 },
             )
 
-    @staticmethod
-    async def get_territories_population(territories_ids: list[int]) -> pd.DataFrame:
+    async def get_territories_population(
+        self, territories_ids: list[int]
+    ) -> pd.DataFrame:
         """
         Function retrieves population data for provided territories
         Args:
@@ -87,7 +90,7 @@ class PopFrameModelApiService:
             for item in range(0, len(territories_ids), 40):
                 current_ids = territories_ids[item : item + 40]
                 task_list = [
-                    urban_api_handler.get(
+                    self.urban_api_handler.get(
                         session=session,
                         endpoint_url=f"/api/v1/territory/{ter_id}/indicator_values",
                         params={"indicator_ids": 1},
@@ -115,9 +118,8 @@ class PopFrameModelApiService:
             )
 
     # ToDo rewrite to object api or graph api
-    @staticmethod
     async def get_matrix_for_region(
-        region_id: int, graph_type: Literal["car", "walk", "intermodal"]
+        self, region_id: int, graph_type: Literal["car", "walk", "intermodal"]
     ) -> pd.DataFrame:
         """
         Function retrieves matrix for region
@@ -131,7 +133,7 @@ class PopFrameModelApiService:
             500, internal error, matrix parsing fails
         """
 
-        response = await transportframe_api_handler.get(
+        response = await self.transportframe_api_handler.get(
             endpoint_url=f"/{region_id}/get_matrix",
             params={
                 "graph_type": graph_type,
@@ -160,8 +162,7 @@ class PopFrameModelApiService:
         return adj_mx
 
     # ToDo Rewrite to api handler
-    @staticmethod
-    async def get_tf_cities(region_id: int) -> gpd.GeoDataFrame:
+    async def get_tf_cities(self, region_id: int) -> gpd.GeoDataFrame:
         """
         Function retrieves cities for region in matrix
         Args:
@@ -174,7 +175,7 @@ class PopFrameModelApiService:
         """
 
         response = requests.get(
-            url=f"{transportframe_api_handler.base_url}/{region_id}/get_towns",
+            url=f"{self.transportframe_api_handler.base_url}/{region_id}/get_towns",
         )
         if response.status_code != 200:
             tmp = json.loads(response.text)
@@ -191,8 +192,7 @@ class PopFrameModelApiService:
         return towns_gdf
 
     # ToDo Rewrite to hash object
-    @staticmethod
-    async def get_cities_indicators_map() -> dict[str, dict[str, str | int | None]]:
+    async def get_cities_indicators_map(self) -> dict[str, dict[str, str | int | None]]:
         """
         Function retrieves map of cities indicators
         Returns:
@@ -201,7 +201,7 @@ class PopFrameModelApiService:
             Any from urban api
         """
 
-        response = await urban_api_handler.get(
+        response = await self.urban_api_handler.get(
             "/api/v1/indicators_by_parent",
             params={"parent_id": 6, "get_all_subtree": "false"},
         )
@@ -223,6 +223,7 @@ class PopFrameModelApiService:
         Function uploads popframe indicators to urban api
         Args:
             indicators_series (pd.Series): series with indicators
+            territory_id (int): territory id
         Returns:
             None
         Raises:
@@ -233,7 +234,7 @@ class PopFrameModelApiService:
         try:
             for i in indicators_series.index:
                 if map_dict.get(i):
-                    await urban_api_handler.put(
+                    await self.urban_api_handler.put(
                         endpoint_url="/api/v1/indicator_value",
                         data={
                             "indicator_id": map_dict[i]["indicator_id"],
@@ -247,6 +248,3 @@ class PopFrameModelApiService:
                     )
         except Exception as e:
             raise e
-
-
-pop_frame_model_api_service = PopFrameModelApiService()
