@@ -6,6 +6,7 @@ from loguru import logger
 from app.common.models.popframe_models.popframe_models_service import (
     pop_frame_model_service,
 )
+from app.common.validators.region_validators import validate_region
 from app.dependencies import towns_layers
 
 recalculating = False
@@ -46,6 +47,7 @@ async def recalculate_region(region_id: int, model: bool = True, towns: bool = T
     - towns (boolean): weather to recalculate towns. Defaults to True.
     """
 
+    validate_region(region_id)
     if model:
         await pop_frame_model_service.calculate_model(region_id)
     if towns:

@@ -11,6 +11,7 @@ from popframe.preprocessing.level_filler import LevelFiller
 from app.common.storage.models.pop_frame_caching_service import (
     pop_frame_caching_service,
 )
+from app.common.validators.region_validators import validate_region
 from app.dependencies import geoserver_storage, http_exception
 
 from .popoframe_dtype.popframe_api_model import PopFrameAPIModel
@@ -70,6 +71,8 @@ class PopFrameModelsService:
         Returns:
             None
         """
+
+        validate_region(region_id)
         logger.info(f"Started model calculation for the region {region_id}")
         region_borders = await pop_frame_model_api_service.get_region_borders(region_id)
         logger.info(f"Extracted region border for the region {region_id}")

@@ -2,10 +2,14 @@ import asyncio
 
 import geopandas as gpd
 import pandas as pd
+from fastapi import HTTPException
+from loguru import logger
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.exceptions.http_exception_wrapper import http_exception
 
 SIMULTANIOUS_CONNECTIONS = 10
+TOWNSNET_GENERAL_TIMEOUT = 360
 
 
 class TownsAPIService:
@@ -23,6 +27,8 @@ class TownsAPIService:
         Initializes the TownsAPIService with an APIHandler instance.
         Args:
             urban_api_handler (APIHandler): An instance of APIHandler to handle API requests for urban api url.
+            townsnet_api_handler (APIHandler): An instance of APIHandler to handle API requests for townsnet api url.
+            socdemo_api_handler (APIHandler): An instance of APIHandler to handle API requests for socdemo api url.
         Returns:
             None
         """
@@ -213,25 +219,51 @@ class TownsAPIService:
         ter_city_map = await get_cities_map_for_ter(filtered_tree_data, limit_ids)
         return ter_city_map
 
-    async def get_townsnet_prov(
-        self, territory_id: int, social_group_id: int
-    ) -> gpd.GeoDataFrame:
+    async def get_townsnet_region_evaluation(
+        self, territory_id: int, social_group_id: int, rerequest_timeout: int = 0
+    ) -> gpd.GeoDataFrame | None:
         """
-        Retrieves townsnet prov for a given territory.
+        Function extracts request for townsnet provision
         Args:
-            territory_id (int): The ID of the territory.
-            social_group_id (int): The ID of the social group.
+            territory_id: territory ID in from Urban DB
+            social_group_id: social group ID in from Urban DB
+            rerequest_timeout: timeout to delay get request
         Returns:
-            gpd.GeoDataFrame: A GeoDataFrame with townsnet prov data.
+            gpd.GeoDataFrame | None: GeoDataFrame containing townsnet provision else None
         Raises:
-            Any HTTP exception from TownsNet API.
+            Any HTTP from urban api
+            500 in case can't parse or get data from townsnet api
         """
 
-        response = await self.townsnet_api_handler.get(
-            f"/provision/{territory_id}/get_evaluation",
-            params={
-                "social_group_id": social_group_id,
-            },
-        )
-
-        return gpd.GeoDataFrame.from_features(response, crs=4326)
+        try:
+            await asyncio.sleep(rerequest_timeout)
+            response = await self.townsnet_api_handler.get(
+                f"/provision/{territory_id}/get_evaluation",
+                params={
+                    "social_group_id": social_group_id,
+                },
+            )
+            return gpd.GeoDataFrame.from_features(response, crs=4326)
+        except HTTPException as e:
+            if e.status_code == 404:
+                if not rerequest_timeout:
+                    await self.townsnet_api_handler.post(
+                        f"/provision/{territory_id}/evaluate_region"
+                    )
+                await asyncio.sleep(rerequest_timeout)
+                return await self.get_townsnet_region_evaluation(
+                    territory_id, social_group_id, TOWNSNET_GENERAL_TIMEOUT
+                )
+            else:
+                raise
+        except Exception as e:
+            logger.error(e)
+            raise http_exception(
+                500,
+                "Error during parsing or getting data from TownsNet API",
+                _input={
+                    "territory_id": territory_id,
+                    "social_group_id": social_group_id,
+                },
+                _detail={"error": repr(e)},
+            )
