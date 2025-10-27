@@ -23,6 +23,8 @@ async def get_anchor_cities(region_id: int, time: int = 50):
     model = await pop_frame_model_service.get_model(region_id)
     builder = AnchorSettlementBuilder(region=model.region_model)
     towns = await towns_layers.get_towns(region_id)
+    towns.reset_index(inplace=True, drop=False)
+    towns.set_index("territory_id", inplace=True)
     settlement_boundaries = builder.get_anchor_settlement_boundaries(towns, time=time)
     logger.info(f"Anchor cities processed successfully for region {region_id}")
     return json.loads(settlement_boundaries.to_crs(4326).to_json())
