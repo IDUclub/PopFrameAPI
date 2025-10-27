@@ -73,7 +73,7 @@ class TownsLayers:
         towns["id"] = towns["territory_id"].copy()
 
         townsnet_prov_tasks = [
-            self.towns_api_service.get_townsnet_prov(
+            self.towns_api_service.get_townsnet_region_evaluation(
                 region_id, soc_group_info["soc_group_id"]
             )
             for soc_group_info in soc_groups

@@ -59,13 +59,14 @@ class APIHandler:
         elif response.status == 500:
             if response.content_type == "application/json":
                 response_info = await response.json()
-                if "reset by peer" in response_info["error"]:
-                    return None
+                if "error" in response_info:
+                    if "reset by peer" in response_info["error"]:
+                        return None
             else:
                 response_info = await response.text()
             exception = http_exception(
                 response.status,
-                "Couldn't get data from API",
+                "Couldn't extract request from API",
                 _input=response.url.__str__(),
                 _detail=response_info,
             )
