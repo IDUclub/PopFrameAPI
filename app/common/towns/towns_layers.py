@@ -6,6 +6,7 @@ from loguru import logger
 from pyogrio.errors import DataSourceError
 
 from app.common.storage.models.gdf_caching_service import GDFCachingService
+from app.common.validators.region_validators import validate_region
 from app.dependencies import TownsAPIService, http_exception
 
 
@@ -115,6 +116,7 @@ class TownsLayers:
             Any HTTP exception from Towns API.
         """
 
+        validate_region(region_id)
         try:
             if force:
                 logger.info(f"Force caching towns for region {region_id}")
