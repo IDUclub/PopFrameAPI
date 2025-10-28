@@ -225,7 +225,7 @@ class TownsAPIService:
         territory_id: int,
         social_group_id: int,
         rerequest_timeout: int = 0,
-        retries=0,
+        retries: int = 0,
     ) -> gpd.GeoDataFrame | None:
         """
         Function extracts request for townsnet provision
