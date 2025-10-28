@@ -10,6 +10,7 @@ from app.common.exceptions.http_exception_wrapper import http_exception
 
 SIMULTANIOUS_CONNECTIONS = 10
 TOWNSNET_GENERAL_TIMEOUT = 360
+GENERAL_RETRIES = 5
 
 
 class TownsAPIService:
@@ -220,7 +221,11 @@ class TownsAPIService:
         return ter_city_map
 
     async def get_townsnet_region_evaluation(
-        self, territory_id: int, social_group_id: int, rerequest_timeout: int = 0
+        self,
+        territory_id: int,
+        social_group_id: int,
+        rerequest_timeout: int = 0,
+        retries: int = 0,
     ) -> gpd.GeoDataFrame | None:
         """
         Function extracts request for townsnet provision
@@ -228,6 +233,7 @@ class TownsAPIService:
             territory_id: territory ID in from Urban DB
             social_group_id: social group ID in from Urban DB
             rerequest_timeout: timeout to delay get request
+            retries (int) retries state
         Returns:
             gpd.GeoDataFrame | None: GeoDataFrame containing townsnet provision else None
         Raises:
@@ -246,13 +252,19 @@ class TownsAPIService:
             return gpd.GeoDataFrame.from_features(response, crs=4326)
         except HTTPException as e:
             if e.status_code == 404:
+                if retries == GENERAL_RETRIES:
+                    raise
                 if not rerequest_timeout:
                     await self.townsnet_api_handler.post(
                         f"/provision/{territory_id}/evaluate_region"
                     )
+                current_retries = retries + 1
                 await asyncio.sleep(rerequest_timeout)
                 return await self.get_townsnet_region_evaluation(
-                    territory_id, social_group_id, TOWNSNET_GENERAL_TIMEOUT
+                    territory_id,
+                    social_group_id,
+                    TOWNSNET_GENERAL_TIMEOUT,
+                    current_retries,
                 )
             else:
                 raise
