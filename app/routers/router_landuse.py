@@ -7,10 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from popframe.method.landuse_assessment import LandUseAssessment
 
 from app.common.auth.bearer import verify_bearer_token
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
 from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
-from app.dependencies import config, pop_frame_model_service
+from app.common.validators.region_validators import validate_region
+from app.dependencies import config
 
 landuse_router = APIRouter(prefix="/landuse", tags=["Landuse data"])
 

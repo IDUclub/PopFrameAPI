@@ -1,12 +1,16 @@
 import json
 from typing import Annotated, Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 
+from app.common.models.popframe_models.popframe_models_service import (
+    pop_frame_model_service,
+)
 from app.common.storage.geoserver.geoserver_dto import PopFrameGeoserverDTO
-from app.dependencies import geoserver_storage, pop_frame_model_service
+from app.common.validators.region_validators import validate_region
+from app.dependencies import geoserver_storage
 from app.dto import RegionAgglomerationDTO
 
 agglomeration_router = APIRouter(prefix="/agglomeration", tags=["Agglomeration"])
@@ -17,6 +21,7 @@ agglomeration_router = APIRouter(prefix="/agglomeration", tags=["Agglomeration"]
 )
 async def get_href(region_id: int) -> list[PopFrameGeoserverDTO]:
 
+    validate_region(region_id)
     agglomeration_check = await geoserver_storage.check_cached_layers(
         region_id=region_id, layer_type="agglomerations"
     )
@@ -45,6 +50,7 @@ async def get_agglomeration_endpoint(
         RegionAgglomerationDTO, Depends(RegionAgglomerationDTO)
     ],
 ):
+
     try:
         popframe_region_model = await pop_frame_model_service.get_model(
             agglomerations_params.region_id
