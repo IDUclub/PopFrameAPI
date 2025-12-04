@@ -14,7 +14,7 @@ from app.common.storage.models.pop_frame_caching_service import (
 from app.common.validators.region_validators import validate_region
 from app.dependencies import geoserver_storage, http_exception
 
-from .popoframe_dtype.popframe_api_model import PopFrameAPIModel
+from .popframe_dtype.popframe_api_model import PopFrameAPIModel, PopFrameRegionalScenarioModel
 from .services.popframe_models_api_service import pop_frame_model_api_service
 
 
@@ -90,6 +90,86 @@ class PopFrameModelsService:
         # if len(cities< 1):
         #     logger.info(f"No cities found for region {region_id}")
         # cities_gdf = gpd.GeoDataFrame.from_features(cities, crs=4326)
+        logger.info(f"Started population retrieval for region {region_id}")
+        if "territory_id" in cities_gdf.columns:
+            cities_gdf["original_index"] = cities_gdf.index.copy()
+            cities_gdf.set_index("territory_id", inplace=True, drop=True)
+        population_data_df = (
+            await pop_frame_model_api_service.get_territories_population(
+                territories_ids=cities_gdf.index.to_list(),
+            )
+        )
+        logger.info(f"Successfully retrieved population data for region {region_id}")
+        cities_gdf = pd.merge(
+            cities_gdf, population_data_df, left_index=True, right_on="territory_id"
+        )
+
+        cities_gdf.set_index("territory_id", inplace=True, drop=True)
+        cities_gdf = gpd.GeoDataFrame(cities_gdf, geometry="geometry", crs=4326)
+        level_filler = LevelFiller(towns=cities_gdf)
+        towns = level_filler.fill_levels()
+        logger.info(f"Loaded cities for region {region_id}")
+        logger.info(f"Started matrix retrieval for region {region_id}")
+        matrix = await pop_frame_model_api_service.get_matrix_for_region(
+            region_id=region_id, graph_type="car"
+        )
+        if "original_index" in cities_gdf.columns:
+            towns = pd.merge(
+                cities_gdf[["original_index"]], towns, left_index=True, right_index=True
+            )
+            towns = gpd.GeoDataFrame(towns, geometry="geometry", crs=4326)
+            towns.set_index("original_index", inplace=True)
+        logger.info(f"Retrieved matrix for region {region_id}")
+        matrix = matrix.loc[towns.index, towns.index]
+        logger.info(f"Loaded matrix for region {region_id}")
+        model = await self.create_model(
+            region_borders=region_borders,
+            towns=towns,
+            adj_mx=matrix,
+            region_id=region_id,
+        )
+        await pop_frame_caching_service.cache_model_to_pickle(
+            region_model=model,
+            region_id=region_id,
+        )
+        frame_method = PopulationFrame(region=model)
+        gdf_frame = frame_method.build_circle_frame()
+        builder = AgglomerationBuilder(region=model)
+        agglomeration_gdf = builder.get_agglomerations()
+        towns_with_status = builder.evaluate_city_agglomeration_status(
+            gdf_frame, agglomeration_gdf
+        )
+        agglomeration_indicators = towns_with_status[
+            "agglomeration_status"
+        ].value_counts()
+        await pop_frame_model_api_service.upload_popframe_indicators(
+            agglomeration_indicators, region_id
+        )
+        await geoserver_storage.delete_geoserver_cached_layers(region_id)
+        logger.info(f"All old .gpkg layer for region {region_id} are deleted")
+        agglomeration_gdf.to_crs(4326, inplace=True)
+        await geoserver_storage.save_gdf_to_geoserver(
+            layer=agglomeration_gdf,
+            name="popframe",
+            region_id=region_id,
+            layer_type="agglomerations",
+        )
+        logger.info(f"Loaded agglomerations for region {region_id} on geoserver")
+        towns_with_status.to_crs(4326, inplace=True)
+        await geoserver_storage.save_gdf_to_geoserver(
+            layer=towns_with_status,
+            name="popframe",
+            region_id=region_id,
+            layer_type="cities",
+        )
+        logger.info(f"Loaded cities for region {region_id} on geoserver")
+
+    async def calculate_regional_scenario_model(self, region_id: int, regional_scenario_id: int) -> PopFrameRegionalScenarioModel:
+
+        logger.info(f"Started model calculation for regional scenario {regional_scenario_id}")
+        region_borders = await pop_frame_model_api_service.get_region_borders(region_id)
+        logger.info(f"Extracted region border for the region {region_id}")
+        cities_gdf = await pop_frame_model_api_service.get_tf_cities(region_id)
         logger.info(f"Started population retrieval for region {region_id}")
         if "territory_id" in cities_gdf.columns:
             cities_gdf["original_index"] = cities_gdf.index.copy()

@@ -117,6 +117,46 @@ class PopFrameModelApiService:
                 _detail={"Error": repr(e)},
             )
 
+    async def get_regional_scenario_territories_population(self, regional_scenario: int, territories_ids: list[int]):
+        """
+        Function retrieves territories population with regional_id
+        Args:
+             regional_scenario (int): regional scenario id from Urban API
+             territories_ids (list[int]): list of territories ids
+        """
+
+        population_list = []
+        async with aiohttp.ClientSession() as session:
+            for item in range(0, len(territories_ids), 40):
+                current_ids = territories_ids[item : item + 40]
+                task_list = [
+                    self.urban_api_handler.get(
+                        session=session,
+                        endpoint_url=f"/api/v1/scenarios/{regional_scenario}/indicator_values",
+                        params={"indicator_ids": 1, "territory_id": ter_id},
+                    )
+                    for ter_id in current_ids
+                ]
+                results = await asyncio.gather(*task_list)
+                pop_to_add = [i[0]["value"] if len(i) > 0 else 1 for i in results]
+                pop_to_add = [int(i) for i in pop_to_add]
+                population_list += pop_to_add
+        try:
+            population_df = pd.DataFrame(
+                np.array([territories_ids, population_list]).T,
+                columns=["territory_id", "population"],
+            )
+            population_df = population_df[population_df["population"] > 0].copy()
+            return population_df
+        except Exception as e:
+            logger.exception(e)
+            raise http_exception(
+                status_code=500,
+                msg=f"error during population data retrieval",
+                _input=[territories_ids, population_list],
+                _detail={"Error": repr(e)},
+            )
+
     # ToDo rewrite to object api or graph api
     async def get_matrix_for_region(
         self, region_id: int, graph_type: Literal["car", "walk", "intermodal"]

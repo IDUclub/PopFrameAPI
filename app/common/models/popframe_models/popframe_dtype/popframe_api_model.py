@@ -21,3 +21,8 @@ class PopFrameAPIModel:
     @classmethod
     def validate_region_id(cls, v: int):
         return validate_region(v)
+
+
+class PopFrameRegionalScenarioModel(PopFrameAPIModel):
+
+    regional_scenario_id: int
