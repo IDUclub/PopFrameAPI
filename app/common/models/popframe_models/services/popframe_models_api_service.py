@@ -24,6 +24,12 @@ class PopFrameModelApiService:
         self.transportframe_api_handler = transportframe_api_handler
         self.urban_api_handler = urban_api_handler
 
+    async def get_regional_scenario_id(self, territory_id: int):
+
+        response = await self.urban_api_handler.get(
+            ""
+        )
+
     # TODO processing database level changes
     async def get_regions(self) -> list[int]:
         """
@@ -138,8 +144,7 @@ class PopFrameModelApiService:
                     for ter_id in current_ids
                 ]
                 results = await asyncio.gather(*task_list)
-                pop_to_add = [i[0]["value"] if len(i) > 0 else 1 for i in results]
-                pop_to_add = [int(i) for i in pop_to_add]
+                pop_to_add = [int(i[0]["value"]) if len(i) > 0 else 1 for i in results]
                 population_list += pop_to_add
         try:
             population_df = pd.DataFrame(
@@ -288,3 +293,5 @@ class PopFrameModelApiService:
                     )
         except Exception as e:
             raise e
+
+    async def upload_

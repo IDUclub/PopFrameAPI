@@ -72,6 +72,7 @@ class PopFrameModelsService:
             None
         """
 
+        base_regional_scenario =
         validate_region(region_id)
         logger.info(f"Started model calculation for the region {region_id}")
         region_borders = await pop_frame_model_api_service.get_region_borders(region_id)
@@ -225,24 +226,6 @@ class PopFrameModelsService:
         await pop_frame_model_api_service.upload_popframe_indicators(
             agglomeration_indicators, region_id
         )
-        await geoserver_storage.delete_geoserver_cached_layers(region_id)
-        logger.info(f"All old .gpkg layer for region {region_id} are deleted")
-        agglomeration_gdf.to_crs(4326, inplace=True)
-        await geoserver_storage.save_gdf_to_geoserver(
-            layer=agglomeration_gdf,
-            name="popframe",
-            region_id=region_id,
-            layer_type="agglomerations",
-        )
-        logger.info(f"Loaded agglomerations for region {region_id} on geoserver")
-        towns_with_status.to_crs(4326, inplace=True)
-        await geoserver_storage.save_gdf_to_geoserver(
-            layer=towns_with_status,
-            name="popframe",
-            region_id=region_id,
-            layer_type="cities",
-        )
-        logger.info(f"Loaded cities for region {region_id} on geoserver")
 
     async def load_and_cache_all_models(self):
         """
