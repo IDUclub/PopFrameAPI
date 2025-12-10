@@ -5,7 +5,7 @@ from app.common.models.popframe_models.popframe_models_service import (
     PopFrameModelsService,
 )
 
-from .handlers import ProjectHandler
+from .handlers import ProjectHandler, RegionScenarioHandler
 
 
 class BrokerService:
@@ -26,7 +26,11 @@ class BrokerService:
         self.broker_client.register_handler(
             ProjectHandler(self.config, self.pop_frame_model_service)
         )
+        self.broker_client.register_handler(
+            RegionScenarioHandler(self.config, self.pop_frame_model_service)
+        )
         self.broker_client.add_worker(topics=["scenario.events"])
+
         await self.broker_client.start()
 
     async def stop(self):

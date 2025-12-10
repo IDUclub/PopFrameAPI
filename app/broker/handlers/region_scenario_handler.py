@@ -22,7 +22,10 @@ class RegionScenarioHandler(BaseMessageHandler[RegionalScenarioCreated]):
 
     async def handle(self, event: RegionalScenarioCreated, ctx):
 
-        self.pop_frame_model_service.calculate_model()
+        await self.pop_frame_model_service.calculate_regional_scenario_model(
+            event.territory_id, event.scenario_id
+        )
+        logger.info(f"Finished calculating regional scenario {event.scenario_id}")
 
     async def on_startup(self):
 

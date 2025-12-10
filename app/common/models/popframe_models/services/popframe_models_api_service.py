@@ -19,16 +19,34 @@ class PopFrameModelApiService:
     """Class for external api services data retrieving"""
 
     def __init__(
-        self, transportframe_api_handler: APIHandler, urban_api_handler: APIHandler
+        self,
+        transportframe_api_handler: APIHandler,
+        urban_api_handler: APIHandler,
+        max_extraction_per_request: int = 20,
     ):
         self.transportframe_api_handler = transportframe_api_handler
         self.urban_api_handler = urban_api_handler
+        self.max_extractions_per_request = max_extraction_per_request
 
-    async def get_regional_scenario_id(self, territory_id: int):
+    async def get_base_regional_scenario_by_territory(self, territory_id: int) -> int:
+        """
+        Function retrieves base regional scenario by territory id
+        Args:
+            territory_id (int): territory_id from urban db
+        Returns:
+            int: base regional scenario
+        Raises:
+            HTTP, Any from Urban API
+        """
 
         response = await self.urban_api_handler.get(
-            ""
+            "/api/v1/scenarios/",
+            params={
+                "territory_id": territory_id,
+                "is_based": True,
+            },
         )
+        return response[0]["scenario_id"]
 
     # TODO processing database level changes
     async def get_regions(self) -> list[int]:
@@ -123,7 +141,9 @@ class PopFrameModelApiService:
                 _detail={"Error": repr(e)},
             )
 
-    async def get_regional_scenario_territories_population(self, regional_scenario: int, territories_ids: list[int]):
+    async def get_regional_scenario_territories_population(
+        self, regional_scenario: int, territories_ids: list[int]
+    ):
         """
         Function retrieves territories population with regional_id
         Args:
@@ -261,14 +281,33 @@ class PopFrameModelApiService:
         }
         return res
 
-    async def upload_popframe_indicators(
-        self, indicators_series: pd.Series, territory_id: int
+    async def get_hexagons(self, region_id: int) -> gpd.GeoDataFrame:
+        """
+        Function retrieves hexagons for region
+        Args:
+            region_id (int): region id from Urban API
+        Returns:
+            gpd.GeoDataFrame: gdf with hexagons
+        Raises:
+            HTTP, Any from Urban API
+        """
+
+        response = await self.urban_api_handler.get(
+            f"/api/v1/territory/{region_id}/hexagon"
+        )
+        return gpd.GeoDataFrame.from_features(response, crs=4326).set_index(
+            "hexagon_id"
+        )
+
+    async def upload_scenario_indicators(
+        self, indicators_series: pd.Series, territory_id: int, regional_scenario_id: int
     ) -> None:
         """
         Function uploads popframe indicators to urban api
         Args:
             indicators_series (pd.Series): series with indicators
             territory_id (int): territory id
+            regional_scenario_id (int)
         Returns:
             None
         Raises:
@@ -280,18 +319,54 @@ class PopFrameModelApiService:
             for i in indicators_series.index:
                 if map_dict.get(i):
                     await self.urban_api_handler.put(
-                        endpoint_url="/api/v1/indicator_value",
+                        endpoint_url=f"/api/v1/scenarios/{regional_scenario_id}/indicator_value",
                         data={
                             "indicator_id": map_dict[i]["indicator_id"],
+                            "scenario_id": regional_scenario_id,
                             "territory_id": territory_id,
-                            "date_type": "year",
-                            "date_value": "2025-01-01",
+                            "hexagon_id": None,
+                            "comment": None,
                             "value": int(indicators_series[i]),
-                            "value_type": "real",
                             "information_source": "modeled/PopFrame",
                         },
                     )
         except Exception as e:
             raise e
 
-    async def upload_
+    # 197
+    async def upload_hexagons_indicators(
+        self,
+        hexagons_indicators: pd.Series,
+        regional_scenario_id: int,
+        territory_id: int,
+    ) -> None:
+        """
+        Function uploads hexagons base indicators to Urban API
+        Args:
+            hexagons_indicators (pd.Series): series with hexagons indicators where index is hexagon ids
+            regional_scenario_id (int): region id from Urban API
+            territory_id (int): territory id from Urban API
+        Returns:
+            None
+        Raises:
+            HTTP, Any from Urban API
+        """
+
+        task_list = [
+            self.urban_api_handler.put(
+                f"api/v1/scenarios/{regional_scenario_id}/indicator_value",
+                data={
+                    "indicator_id": 197,
+                    "scenario_id": regional_scenario_id,
+                    "territory_id": territory_id,
+                    "hexagon_id": i,
+                    "comment": None,
+                    "value": int(hexagons_indicators[i]["popframe_estimation"]),
+                    "information_source": "modeled/PopFrame",
+                },
+            )
+            for i in hexagons_indicators.index
+        ]
+
+        for i in range(0, len(task_list), self.max_extractions_per_request):
+            await asyncio.gather(*task_list[i : i + self.max_extractions_per_request])
