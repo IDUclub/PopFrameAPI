@@ -8,6 +8,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
+from iduconfig import Config
 from loguru import logger
 from shapely.geometry import shape
 
@@ -20,13 +21,16 @@ class PopFrameModelApiService:
 
     def __init__(
         self,
+        config: Config,
         transportframe_api_handler: APIHandler,
         urban_api_handler: APIHandler,
         max_extraction_per_request: int = 20,
     ):
+
         self.transportframe_api_handler = transportframe_api_handler
         self.urban_api_handler = urban_api_handler
         self.max_extractions_per_request = max_extraction_per_request
+        self.config = config
 
     async def get_base_regional_scenario_by_territory(self, territory_id: int) -> int:
         """
@@ -142,13 +146,14 @@ class PopFrameModelApiService:
             )
 
     async def get_regional_scenario_territories_population(
-        self, regional_scenario: int, territories_ids: list[int]
+        self, regional_scenario: int, territories_ids: list[int], region_id: int
     ):
         """
         Function retrieves territories population with regional_id
         Args:
              regional_scenario (int): regional scenario id from Urban API
              territories_ids (list[int]): list of territories ids
+             region_id (int): region id from Urban API
         """
 
         population_list = []
@@ -158,13 +163,26 @@ class PopFrameModelApiService:
                 task_list = [
                     self.urban_api_handler.get(
                         session=session,
-                        endpoint_url=f"/api/v1/scenarios/{regional_scenario}/indicator_values",
+                        endpoint_url=f"/api/v1/scenarios/{regional_scenario}/indicators_values",
                         params={"indicator_ids": 1, "territory_id": ter_id},
                     )
                     for ter_id in current_ids
                 ]
                 results = await asyncio.gather(*task_list)
-                pop_to_add = [int(i[0]["value"]) if len(i) > 0 else 1 for i in results]
+                result_series = pd.Series(results, index=current_ids)
+                series_to_get_from_base = result_series[result_series.map(len) == 0]
+                task_list_to_get_from_base = [
+                    self.urban_api_handler.get(
+                        session=session,
+                        endpoint_url=f"/api/v1/territory/{region_id}/indicator_values",
+                        params={"indicator_ids": 1, "territory_id": ter_id},
+                    )
+                    for ter_id in series_to_get_from_base.index.to_list()
+                ]
+                results_from_base = await asyncio.gather(*task_list_to_get_from_base)
+                result_series[result_series.map(len) == 0] = results_from_base
+                results = result_series.to_list()
+                pop_to_add = [int(i["value"]) if len(i) > 0 else 1 for i in results]
                 population_list += pop_to_add
         try:
             population_df = pd.DataFrame(
@@ -293,7 +311,7 @@ class PopFrameModelApiService:
         """
 
         response = await self.urban_api_handler.get(
-            f"/api/v1/territory/{region_id}/hexagon"
+            f"/api/v1/territory/{region_id}/hexagons"
         )
         return gpd.GeoDataFrame.from_features(response, crs=4326).set_index(
             "hexagon_id"
@@ -333,7 +351,6 @@ class PopFrameModelApiService:
         except Exception as e:
             raise e
 
-    # 197
     async def upload_hexagons_indicators(
         self,
         hexagons_indicators: pd.Series,
@@ -354,16 +371,18 @@ class PopFrameModelApiService:
 
         task_list = [
             self.urban_api_handler.put(
-                f"api/v1/scenarios/{regional_scenario_id}/indicator_value",
+                f"/api/v1/scenarios/{regional_scenario_id}/indicators_values",
                 data={
                     "indicator_id": 197,
                     "scenario_id": regional_scenario_id,
                     "territory_id": territory_id,
                     "hexagon_id": i,
                     "comment": None,
-                    "value": int(hexagons_indicators[i]["popframe_estimation"]),
+                    "value": int(hexagons_indicators[i]),
                     "information_source": "modeled/PopFrame",
+                    "properties": {},
                 },
+                headers={"Authorization": f"Bearer {self.config.get('ACCESS_TOKEN')}"},
             )
             for i in hexagons_indicators.index
         ]

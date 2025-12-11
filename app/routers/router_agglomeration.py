@@ -5,12 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 
-from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
-)
 from app.common.storage.geoserver.geoserver_dto import PopFrameGeoserverDTO
 from app.common.validators.region_validators import validate_region
-from app.dependencies import geoserver_storage
+from app.dependencies import geoserver_storage, pop_frame_model_service
 from app.dto import RegionAgglomerationDTO
 
 agglomeration_router = APIRouter(prefix="/agglomeration", tags=["Agglomeration"])

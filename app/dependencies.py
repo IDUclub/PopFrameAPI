@@ -48,7 +48,7 @@ geoserver_storage = GeoserverStorage(
 )
 
 pop_frame_model_api_service = PopFrameModelApiService(
-    transportframe_api_handler, urban_api_handler
+    config, transportframe_api_handler, urban_api_handler
 )
 pop_frame_caching_service = PopFrameCachingService(
     (
@@ -59,5 +59,8 @@ pop_frame_caching_service = PopFrameCachingService(
     config,
 )
 pop_frame_model_service = PopFrameModelsService(
-    geoserver_storage, pop_frame_caching_service, pop_frame_model_api_service
+    geoserver_storage,
+    pop_frame_caching_service,
+    pop_frame_model_api_service,
+    urban_api_gateway,
 )

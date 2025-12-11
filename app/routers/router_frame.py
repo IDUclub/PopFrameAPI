@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from popframe.method.agglomeration import AgglomerationBuilder
 from popframe.method.popuation_frame import PopulationFrame
 
-from app.common.models.popframe_models.popoframe_dtype.popframe_api_model import (
+from app.common.models.popframe_models.popframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
 from app.dependencies import pop_frame_model_service

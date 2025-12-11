@@ -6,6 +6,7 @@ from app.common.models.popframe_models.popframe_models_service import (
 )
 
 from .handlers import ProjectHandler, RegionScenarioHandler
+from .producer_wrapper import ProducerWrapper
 
 
 class BrokerService:
@@ -23,11 +24,15 @@ class BrokerService:
 
     async def register_and_start(self):
 
+        producer = ProducerWrapper()
+
         self.broker_client.register_handler(
             ProjectHandler(self.config, self.pop_frame_model_service)
         )
         self.broker_client.register_handler(
-            RegionScenarioHandler(self.config, self.pop_frame_model_service)
+            RegionScenarioHandler(
+                self.config, self.pop_frame_model_service, producer.producer_service
+            )
         )
         self.broker_client.add_worker(topics=["scenario.events"])
 

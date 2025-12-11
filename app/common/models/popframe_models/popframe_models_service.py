@@ -10,24 +10,34 @@ from popframe.method.territory_evaluation import TerritoryEvaluation
 from popframe.models.region import Region
 from popframe.preprocessing.level_filler import LevelFiller
 
-from app.common.validators.region_validators import validate_region
-from app.dependencies import (
-    geoserver_storage,
-    http_exception,
-    pop_frame_caching_service,
-    pop_frame_model_api_service,
-    urban_api_gateway,
-)
-from app.routers.router_population import get_population_criterion_score_endpoint
-
-from .popframe_dtype.popframe_api_model import (
+from app.common.exceptions.http_exception_wrapper import http_exception
+from app.common.gateways.urban_api_gateway import UrbanAPIGateway
+from app.common.models.popframe_models.popframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
-    PopFrameRegionalScenarioModel,
 )
+from app.common.models.popframe_models.services.popframe_models_api_service import (
+    PopFrameModelApiService,
+)
+from app.common.storage.geoserver.goserver import GeoserverStorage
+from app.common.storage.models.pop_frame_caching_service import PopFrameCachingService
+from app.common.validators.region_validators import validate_region
 
 
 class PopFrameModelsService:
     """Class for popframe model handling"""
+
+    def __init__(
+        self,
+        geoserver_storage: GeoserverStorage,
+        pop_frame_caching_service: PopFrameCachingService,
+        pop_frame_model_api_service: PopFrameModelApiService,
+        urban_api_gateway: UrbanAPIGateway,
+    ):
+
+        self.geoserver_storage = geoserver_storage
+        self.pop_frame_caching_service = pop_frame_caching_service
+        self.pop_frame_model_api_service = pop_frame_model_api_service
+        self.urban_api_gateway = urban_api_gateway
 
     @staticmethod
     async def create_model(
@@ -80,24 +90,23 @@ class PopFrameModelsService:
             None
         """
 
-        base_regional_scenario = (
-            await pop_frame_model_api_service.get_base_regional_scenario_by_territory(
-                region_id
-            )
+        base_regional_scenario = await self.pop_frame_model_api_service.get_base_regional_scenario_by_territory(
+            region_id
         )
         validate_region(region_id)
         logger.info(f"Started model calculation for the region {region_id}")
-        region_borders = await pop_frame_model_api_service.get_region_borders(region_id)
+        region_borders = await self.pop_frame_model_api_service.get_region_borders(
+            region_id
+        )
         logger.info(f"Extracted region border for the region {region_id}")
         # ToDo revise cities after broker
-        cities_gdf = await pop_frame_model_api_service.get_tf_cities(region_id)
+        cities_gdf = await self.pop_frame_model_api_service.get_tf_cities(region_id)
         logger.info(f"Started population retrieval for region {region_id}")
         if "territory_id" in cities_gdf.columns:
             cities_gdf["original_index"] = cities_gdf.index.copy()
             cities_gdf.set_index("territory_id", inplace=True, drop=True)
-        population_data_df = await pop_frame_model_api_service.get_regional_scenario_territories_population(
-            base_regional_scenario,
-            cities_gdf.index.to_list(),
+        population_data_df = await self.pop_frame_model_api_service.get_regional_scenario_territories_population(
+            base_regional_scenario, cities_gdf.index.to_list(), region_id
         )
         logger.info(f"Successfully retrieved population data for region {region_id}")
         cities_gdf = pd.merge(
@@ -110,7 +119,7 @@ class PopFrameModelsService:
         towns = level_filler.fill_levels()
         logger.info(f"Loaded cities for region {region_id}")
         logger.info(f"Started matrix retrieval for region {region_id}")
-        matrix = await pop_frame_model_api_service.get_matrix_for_region(
+        matrix = await self.pop_frame_model_api_service.get_matrix_for_region(
             region_id=region_id, graph_type="car"
         )
         if "original_index" in cities_gdf.columns:
@@ -128,7 +137,7 @@ class PopFrameModelsService:
             adj_mx=matrix,
             region_id=region_id,
         )
-        await pop_frame_caching_service.cache_model_to_pickle(
+        await self.pop_frame_caching_service.cache_model_to_pickle(
             region_model=model,
             region_id=region_id,
         )
@@ -142,13 +151,13 @@ class PopFrameModelsService:
         agglomeration_indicators = towns_with_status[
             "agglomeration_status"
         ].value_counts()
-        await pop_frame_model_api_service.upload_scenario_indicators(
+        await self.pop_frame_model_api_service.upload_scenario_indicators(
             agglomeration_indicators, region_id, base_regional_scenario
         )
-        await geoserver_storage.delete_geoserver_cached_layers(region_id)
+        await self.geoserver_storage.delete_geoserver_cached_layers(region_id)
         logger.info(f"All old .gpkg layer for region {region_id} are deleted")
         agglomeration_gdf.to_crs(4326, inplace=True)
-        await geoserver_storage.save_gdf_to_geoserver(
+        await self.geoserver_storage.save_gdf_to_geoserver(
             layer=agglomeration_gdf,
             name="popframe",
             region_id=region_id,
@@ -156,7 +165,7 @@ class PopFrameModelsService:
         )
         logger.info(f"Loaded agglomerations for region {region_id} on geoserver")
         towns_with_status.to_crs(4326, inplace=True)
-        await geoserver_storage.save_gdf_to_geoserver(
+        await self.geoserver_storage.save_gdf_to_geoserver(
             layer=towns_with_status,
             name="popframe",
             region_id=region_id,
@@ -164,15 +173,16 @@ class PopFrameModelsService:
         )
         logger.info(f"Loaded cities for region {region_id} on geoserver")
 
-    @staticmethod
     async def get_population_criterion_score(
-        hexagons: gpd.GeoDataFrame, popframe_region_model: PopFrameAPIModel
+        self, hexagons: gpd.GeoDataFrame, popframe_region_model: PopFrameAPIModel
     ) -> list | None:
 
         polygon_gdf = hexagons.to_crs(popframe_region_model.region_model.crs)
         if popframe_region_model.region_id in [3138, 3268, 16141]:
-            region_mo = await urban_api_gateway.get_mo_for_fed_city_with_population(
-                popframe_region_model.region_id
+            region_mo = (
+                await self.urban_api_gateway.get_mo_for_fed_city_with_population(
+                    popframe_region_model.region_id
+                )
             )
             if len(polygon_gdf) == 1:
                 polygon_gdf["hexagon_id"] = 0
@@ -194,16 +204,17 @@ class PopFrameModelsService:
         logger.info(
             f"Started model calculation for regional scenario {regional_scenario_id}"
         )
-        region_borders = await pop_frame_model_api_service.get_region_borders(region_id)
+        region_borders = await self.pop_frame_model_api_service.get_region_borders(
+            region_id
+        )
         logger.info(f"Extracted region border for the region {region_id}")
-        cities_gdf = await pop_frame_model_api_service.get_tf_cities(region_id)
+        cities_gdf = await self.pop_frame_model_api_service.get_tf_cities(region_id)
         logger.info(f"Started population retrieval for region {region_id}")
         if "territory_id" in cities_gdf.columns:
             cities_gdf["original_index"] = cities_gdf.index.copy()
             cities_gdf.set_index("territory_id", inplace=True, drop=True)
-        population_data_df = await pop_frame_model_api_service.get_regional_scenario_territories_population(
-            regional_scenario_id,
-            cities_gdf.index.to_list(),
+        population_data_df = await self.pop_frame_model_api_service.get_regional_scenario_territories_population(
+            regional_scenario_id, cities_gdf.index.to_list(), region_id
         )
         logger.info(f"Successfully retrieved population data for region {region_id}")
         cities_gdf = pd.merge(
@@ -216,7 +227,7 @@ class PopFrameModelsService:
         towns = level_filler.fill_levels()
         logger.info(f"Loaded cities for region {region_id}")
         logger.info(f"Started matrix retrieval for region {region_id}")
-        matrix = await pop_frame_model_api_service.get_matrix_for_region(
+        matrix = await self.pop_frame_model_api_service.get_matrix_for_region(
             region_id=region_id, graph_type="car"
         )
         if "original_index" in cities_gdf.columns:
@@ -234,10 +245,6 @@ class PopFrameModelsService:
             adj_mx=matrix,
             region_id=region_id,
         )
-        await pop_frame_caching_service.cache_model_to_pickle(
-            region_model=model,
-            region_id=region_id,
-        )
         frame_method = PopulationFrame(region=model)
         gdf_frame = frame_method.build_circle_frame()
         builder = AgglomerationBuilder(region=model)
@@ -248,15 +255,15 @@ class PopFrameModelsService:
         agglomeration_indicators = towns_with_status[
             "agglomeration_status"
         ].value_counts()
-        await pop_frame_model_api_service.upload_scenario_indicators(
+        await self.pop_frame_model_api_service.upload_scenario_indicators(
             agglomeration_indicators, region_id, regional_scenario_id
         )
-        hexagons = await pop_frame_model_api_service.get_hexagons(region_id)
+        hexagons = await self.pop_frame_model_api_service.get_hexagons(region_id)
         hexagons["popframe_estimation"] = await self.get_population_criterion_score(
             hexagons, PopFrameAPIModel(region_id, model)
         )
-        await pop_frame_model_api_service.upload_hexagons_indicators(
-            hexagons[["popframe_estimation"]], regional_scenario_id, region_id
+        await self.pop_frame_model_api_service.upload_hexagons_indicators(
+            hexagons["popframe_estimation"], regional_scenario_id, region_id
         )
 
     async def load_and_cache_all_models(self):
@@ -266,7 +273,7 @@ class PopFrameModelsService:
             None
         """
 
-        regions_ids_to_process = await pop_frame_model_api_service.get_regions()
+        regions_ids_to_process = await self.pop_frame_model_api_service.get_regions()
         for region_id in regions_ids_to_process:
             try:
                 await self.calculate_model(region_id=region_id)
@@ -281,7 +288,7 @@ class PopFrameModelsService:
         """
 
         try:
-            all_regions = await pop_frame_model_api_service.get_regions()
+            all_regions = await self.pop_frame_model_api_service.get_regions()
             cached_regions = await self.get_available_regions()
             regions_to_calculate = list(set(all_regions) - set(cached_regions))
         except Exception as e:
@@ -306,21 +313,19 @@ class PopFrameModelsService:
             PopFrameAPIModel: PopFrameAPIModel model for region
         """
 
-        if not await pop_frame_caching_service.check_path(region_id=region_id):
+        if not await self.pop_frame_caching_service.check_path(region_id=region_id):
             await self.calculate_model(region_id=region_id)
-        model = await pop_frame_caching_service.load_cached_model(region_id=region_id)
+        model = await self.pop_frame_caching_service.load_cached_model(
+            region_id=region_id
+        )
         return PopFrameAPIModel(region_id, model)
 
-    @staticmethod
-    async def get_available_regions() -> list[int]:
+    async def get_available_regions(self) -> list[int]:
         """
         Function gets available models
         Returns:
             list[int]: available models list
         """
 
-        result = await pop_frame_caching_service.get_available_models()
+        result = await self.pop_frame_caching_service.get_available_models()
         return result
-
-
-pop_frame_model_service = PopFrameModelsService()
