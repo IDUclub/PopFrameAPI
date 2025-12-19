@@ -1,4 +1,5 @@
 import asyncio
+from http.client import responses
 
 import geopandas as gpd
 import pandas as pd
@@ -229,3 +230,34 @@ class UrbanAPIGateway:
             f"api/v1/territory/{territory_id}/hexagons",
         )
         return gpd.GeoDataFrame.from_features(response, crs=4326)
+
+    async def get_countries_ids(self) -> list[int]:
+        """
+        Function retrieves countries from Urban API (top level administrative hierarchy level).
+        Returns:
+            list[int]: A list of countries IDs.
+        """
+
+        response = await self.api_handler.get(
+            f"api/v1/all_territories_without_geometry",
+        )
+        return [i["territory_id"] for i in response]
+
+    async def get_federal_cities(self, country_id: int) -> list[int]:
+        """
+        Function retrieves federal cities from Urban API.
+        Args:
+            country_id (int): The ID of the country from Urban API.
+        Returns:
+            list[int]: A list of federal cities ids.
+        """
+
+        response = await self.api_handler.get(
+            f"api/v1/all_territories_without_geometry",
+            params={"parent_id": country_id},
+        )
+        return [
+            i["territory_id"]
+            for i in response
+            if i["territory_type"]["name"] == "Город федерального значения"
+        ]  # federal cities filtration

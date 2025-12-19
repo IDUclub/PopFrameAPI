@@ -4,6 +4,7 @@ from iduconfig import Config
 from prometheus_client import start_http_server
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.checkers.territory_checker import TerritoryChecker
 from app.common.exceptions.http_exception_wrapper import http_exception
 from app.common.gateways.urban_api_gateway import UrbanAPIGateway
 from app.common.logs.loging import init_logger
@@ -39,6 +40,8 @@ townsnet_api_service = TownsAPIService(
     urban_api_handler, townsnet_api_handler, socdemo_api_handler
 )
 
+territory_checker = TerritoryChecker(urban_api_gateway)
+
 towns_layers = TownsLayers(townsnet_api_service, towns_caching_service)
 geoserver_storage = GeoserverStorage(
     cache_path=Path().absolute()
@@ -63,4 +66,5 @@ pop_frame_model_service = PopFrameModelsService(
     pop_frame_caching_service,
     pop_frame_model_api_service,
     urban_api_gateway,
+    territory_checker,
 )

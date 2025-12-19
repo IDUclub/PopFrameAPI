@@ -10,6 +10,7 @@ from popframe.method.territory_evaluation import TerritoryEvaluation
 from popframe.models.region import Region
 from popframe.preprocessing.level_filler import LevelFiller
 
+from app.common.checkers.territory_checker import TerritoryChecker
 from app.common.exceptions.http_exception_wrapper import http_exception
 from app.common.gateways.urban_api_gateway import UrbanAPIGateway
 from app.common.models.popframe_models.popframe_dtype.popframe_api_model import (
@@ -22,8 +23,6 @@ from app.common.storage.geoserver.goserver import GeoserverStorage
 from app.common.storage.models.pop_frame_caching_service import PopFrameCachingService
 from app.common.validators.region_validators import validate_region
 
-FEDERAL_CITIES_IDS = [3138, 3268, 16141]
-
 
 class PopFrameModelsService:
     """Class for popframe model handling"""
@@ -34,12 +33,14 @@ class PopFrameModelsService:
         pop_frame_caching_service: PopFrameCachingService,
         pop_frame_model_api_service: PopFrameModelApiService,
         urban_api_gateway: UrbanAPIGateway,
+        territories_checker: TerritoryChecker,
     ):
 
         self.geoserver_storage = geoserver_storage
         self.pop_frame_caching_service = pop_frame_caching_service
         self.pop_frame_model_api_service = pop_frame_model_api_service
         self.urban_api_gateway = urban_api_gateway
+        self.territories_checker = territories_checker
 
     @staticmethod
     async def create_model(
@@ -180,14 +181,14 @@ class PopFrameModelsService:
     ) -> list | None:
 
         polygon_gdf = hexagons.to_crs(popframe_region_model.region_model.crs)
-        if popframe_region_model.region_id in FEDERAL_CITIES_IDS:
+        if await self.territories_checker.check_on_federal_city(
+            popframe_region_model.region_id
+        ):
             region_mo = (
                 await self.urban_api_gateway.get_mo_for_fed_city_with_population(
                     popframe_region_model.region_id
                 )
             )
-            if len(polygon_gdf) == 1:
-                polygon_gdf["hexagon_id"] = 0
             scorer = CityPopulationScorer(region_mo, polygon_gdf)
             return pd.DataFrame(scorer.run())["score"].tolist()
         else:

@@ -10,9 +10,12 @@ from app.common.auth.bearer import verify_bearer_token
 from app.common.models.popframe_models.popframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
-from app.dependencies import config, pop_frame_model_service, urban_api_gateway
-
-FEDERAL_CITIES_IDS = [3138, 3268, 16141]
+from app.dependencies import (
+    config,
+    pop_frame_model_service,
+    territory_checker,
+    urban_api_gateway,
+)
 
 population_router = APIRouter(prefix="/population", tags=["Population Criterion"])
 
@@ -32,7 +35,7 @@ async def get_population_criterion_score_endpoint(
 
     polygon_gdf = gpd.GeoDataFrame.from_features(geojson_data["features"], crs=4326)
     polygon_gdf = polygon_gdf.to_crs(popframe_region_model.region_model.crs)
-    if popframe_region_model.region_id in FEDERAL_CITIES_IDS:
+    if await territory_checker.check_on_federal_city(popframe_region_model.region_id):
         region_mo = await urban_api_gateway.get_mo_for_fed_city_with_population(
             popframe_region_model.region_id
         )
