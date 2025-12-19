@@ -10,6 +10,7 @@ class TerritoryChecker:
     This class is aimed to check territory statuses for.
     Attributes:
         urban_api_gateway (UrbanAPIGateway): API Gateway for Urban API requests
+        federal_cities (np.ndarray): numpy array of federal cities ids (as int) from Urban API. None on init.
     """
 
     def __init__(self, urban_api_gateway: UrbanAPIGateway):
@@ -19,7 +20,8 @@ class TerritoryChecker:
             urban_api_gateway (UrbanAPIGateway): API Gateway for Urban API requests
         """
 
-        self.urban_api_gateway = urban_api_gateway
+        self.urban_api_gateway: UrbanAPIGateway = urban_api_gateway
+        self.federal_cities: np.ndarray | None = None
 
     async def check_on_federal_city(self, territory_id: int) -> bool:
         """
@@ -30,12 +32,14 @@ class TerritoryChecker:
             bool: True if territory is a federal city else False
         """
 
-        countries_ids = await self.urban_api_gateway.get_countries_ids()
-        results = await asyncio.gather(
-            *(
-                self.urban_api_gateway.get_federal_cities(country_id)
-                for country_id in countries_ids
+        if not self.federal_cities:
+            countries_ids = await self.urban_api_gateway.get_countries_ids()
+            results = await asyncio.gather(
+                *(
+                    self.urban_api_gateway.get_federal_cities(country_id)
+                    for country_id in countries_ids
+                )
             )
-        )
+            self.federal_cities = np.concatenate([np.array(r) for r in results])
 
-        return territory_id in np.concatenate([np.array(r) for r in results])
+        return territory_id in self.federal_cities
