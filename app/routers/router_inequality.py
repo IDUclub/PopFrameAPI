@@ -7,11 +7,13 @@ from popframe.method.spatial_inequality import SpatialInequalityCalculator
 from pydantic_geojson import FeatureCollectionModel
 
 from app.common.auth.bearer import verify_bearer_token
-from app.common.models.popframe_models.popframe_models_service import (
-    pop_frame_model_service,
-)
 from app.common.validators.region_validators import validate_region
-from app.dependencies import http_exception, towns_layers, urban_api_gateway
+from app.dependencies import (
+    http_exception,
+    pop_frame_model_service,
+    towns_layers,
+    urban_api_gateway,
+)
 
 inequality_router = APIRouter(prefix="/inequality", tags=["inequality"])
 
