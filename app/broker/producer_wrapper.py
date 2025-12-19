@@ -11,3 +11,7 @@ class ProducerWrapper:
     async def start(self):
         self.producer_service.init_loop()
         await self.producer_service.start()
+
+    async def stop(self):
+
+        await self.producer_service.close()

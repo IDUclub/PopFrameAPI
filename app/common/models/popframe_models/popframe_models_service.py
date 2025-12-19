@@ -22,6 +22,8 @@ from app.common.storage.geoserver.goserver import GeoserverStorage
 from app.common.storage.models.pop_frame_caching_service import PopFrameCachingService
 from app.common.validators.region_validators import validate_region
 
+FEDERAL_CITIES_IDS = [3138, 3268, 16141]
+
 
 class PopFrameModelsService:
     """Class for popframe model handling"""
@@ -178,7 +180,7 @@ class PopFrameModelsService:
     ) -> list | None:
 
         polygon_gdf = hexagons.to_crs(popframe_region_model.region_model.crs)
-        if popframe_region_model.region_id in [3138, 3268, 16141]:
+        if popframe_region_model.region_id in FEDERAL_CITIES_IDS:
             region_mo = (
                 await self.urban_api_gateway.get_mo_for_fed_city_with_population(
                     popframe_region_model.region_id
