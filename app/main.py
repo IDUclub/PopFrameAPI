@@ -33,6 +33,7 @@ broker_service = BrokerService(config, broker_client, pop_frame_model_service)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
+    await pop_frame_model_service.load_and_cache_all_models_on_startup()
     await broker_service.register_and_start()
     yield
     await broker_service.stop()
@@ -42,7 +43,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="PopFrame API",
     description="API for PopFrame service, handling territory evaluation, population criteria, network frame, and land use data.",
-    version="3.0.1",
+    version="3.0.3",
 )
 
 # Add CORS middleware

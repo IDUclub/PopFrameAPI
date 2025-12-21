@@ -62,7 +62,12 @@ async def process_population_criterion(
         headers={"Authorization": f"Bearer {token}"},
     )
     if scenario_response.status_code != 200:
-        raise Exception("Ошибка при получении информации по сценарию")
+        if scenario_response.status_code == 404:
+            raise HTTPException(404)
+        else:
+            raise Exception(
+                "Непредвиденная ошибка при получении информации по сценарию"
+            )
 
     scenario_data = scenario_response.json()
     project_id = scenario_data.get("project", {}).get("project_id")

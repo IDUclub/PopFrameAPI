@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from iduconfig import Config
 from loguru import logger
 from otteroad.consumer import BaseMessageHandler
@@ -34,11 +35,25 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
 
         logger.info("Started processing event {}", repr(event))
         model = await self.pop_frame_model_service.get_model(event.territory_id)
-        await process_population_criterion(
-            model,
-            event.base_scenario_id,
-            self.config.get("URBAN_API_ACCESS_TOKEN"),
-        )
+        try:
+            await process_population_criterion(
+                model,
+                event.base_scenario_id,
+                self.config.get("URBAN_API_ACCESS_TOKEN"),
+            )
+        except HTTPException as http_e:
+            if http_e.status_code == 404:
+                logger.info(
+                    "Project with id {} not found, event would not be handled. Most likely it was deleted".format(
+                        event.base_scenario_id
+                    )
+                )
+        except Exception as e:
+            logger.error(
+                "Failed to process event {}. Failed with error {}".format(
+                    repr(event.base_scenario_id), repr(e)
+                )
+            )
         logger.info(f"Finished processing event {repr(event)}")
 
     async def on_startup(self):
