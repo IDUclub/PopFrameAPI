@@ -8,6 +8,7 @@ from app.common.models.popframe_models.popframe_models_service import (
     PopFrameModelsService,
 )
 from app.routers.router_population import process_population_criterion
+from app.routers.router_territory import process_evaluation
 
 
 class ProjectHandler(BaseMessageHandler[ProjectCreated]):
@@ -37,6 +38,11 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
         model = await self.pop_frame_model_service.get_model(event.territory_id)
         try:
             await process_population_criterion(
+                model,
+                event.base_scenario_id,
+                self.config.get("URBAN_API_ACCESS_TOKEN"),
+            )
+            await process_evaluation(
                 model,
                 event.base_scenario_id,
                 self.config.get("URBAN_API_ACCESS_TOKEN"),
