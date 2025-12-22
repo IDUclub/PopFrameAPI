@@ -43,7 +43,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="PopFrame API",
     description="API for PopFrame service, handling territory evaluation, population criteria, network frame, and land use data.",
-    version="3.0.3",
+    version="3.0.4",
 )
 
 # Add CORS middleware

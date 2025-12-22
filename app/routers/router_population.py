@@ -100,6 +100,7 @@ async def process_population_criterion(
             "scenario_id": project_scenario_id,
             "territory_id": None,
             "hexagon_id": None,
+            "properties": {},
             "value": float(res["score"]),
             "comment": res["interpretation"],
             "information_source": "modeled PopFrame",
