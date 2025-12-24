@@ -59,7 +59,7 @@ async def process_evaluation(
     try:
         # Getting project_id and additional information based on scenario_id
         scenario_response = requests.get(
-            f"{config.get('URBAN_API')}/scenarios/{project_scenario_id}",
+            f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
             headers={"Authorization": f"Bearer {token}"},
         )
         if scenario_response.status_code != 200:
@@ -72,7 +72,7 @@ async def process_evaluation(
 
         # Retrieving territory geometry
         territory_response = requests.get(
-            f"{config.get('URBAN_API')}/projects/{project_id}/territory",
+            f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
             headers={"Authorization": f"Bearer {token}"},
         )
         if territory_response.status_code != 200:
@@ -121,10 +121,11 @@ async def process_evaluation(
                 "value": float(res["score"]),
                 "comment": interpretation,
                 "information_source": "modeled PopFrame",
+                "properties": {},
             }
 
-            indicators_response = requests.post(
-                f"{config.get('URBAN_API')}/scenarios/indicators_values",
+            indicators_response = requests.put(
+                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
                 headers={"Authorization": f"Bearer {token}"},
                 json=indicator_data,
             )
