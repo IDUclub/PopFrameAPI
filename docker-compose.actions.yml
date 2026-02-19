@@ -4,7 +4,7 @@ services:
     container_name: ${CONTAINER_NAME}
     ports:
       - "5610:80"
-      - "9464:9464"
+      - "9465:9464"
     env_file:
       - .env.production
     volumes:
