@@ -8,7 +8,7 @@ from otteroad import (
     KafkaConsumerSettings,
 )
 
-from app.common.exceptions.exception_handler import ExceptionHandlerMiddleware
+from __version__ import APP_VERSION
 from app.routers import (
     router_agglomeration,
     router_frame,
@@ -22,28 +22,39 @@ from app.routers.router_popframe_models import model_calculator_router
 
 from .broker.broker_service import BrokerService
 from .common.exceptions.http_exception_wrapper import http_exception
+from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
+from .common.middlewares.prometheus_handler import ObservabilityMiddleware
 from .dependencies import config, pop_frame_model_service
+from .observability import OpenTelemetryAgent, PrometheusConfig
+from .observability.metrics import setup_metrics
 
 consumer_settings = KafkaConsumerSettings.from_env()
 
 broker_client = KafkaConsumerService(consumer_settings)
 broker_service = BrokerService(config, broker_client, pop_frame_model_service)
+metrics = setup_metrics()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
+    otel_agent = OpenTelemetryAgent(
+        prometheus_config=PrometheusConfig(
+            host="0.0.0.0",
+            port=int(config.get("PROMETHEUS_PORT")),
+        ),
+    )
     await pop_frame_model_service.load_and_cache_all_models_on_startup()
     await broker_service.register_and_start()
     yield
     await broker_service.stop()
+    otel_agent.shutdown()
 
 
 app = FastAPI(
     lifespan=lifespan,
     title="PopFrame API",
     description="API for PopFrame service, handling territory evaluation, population criteria, network frame, and land use data.",
-    version="3.0.5",
+    version=APP_VERSION,
 )
 
 # Add CORS middleware
@@ -54,7 +65,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(ExceptionHandlerMiddleware, metrics=metrics)
+app.add_middleware(ObservabilityMiddleware, metrics=metrics)
 
 
 # Root endpoint
