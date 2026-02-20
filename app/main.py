@@ -8,7 +8,7 @@ from otteroad import (
     KafkaConsumerSettings,
 )
 
-from __version__ import APP_VERSION
+from app.__version__ import APP_VERSION
 from app.routers import (
     router_agglomeration,
     router_frame,
