@@ -51,6 +51,28 @@ def test_from_config_reports_missing_keys_without_values():
     assert SECRET not in message
 
 
+class RaisingConfig(FakeConfig):
+    """Mimics iduconfig.Config, which raises ValueError on empty or missing keys."""
+
+    def get(self, key):
+        value = self.values.get(key)
+        if not value:
+            raise ValueError(f"No such env: {key}")
+        return value
+
+
+def test_from_config_aggregates_iduconfig_value_errors():
+    config = RaisingConfig({"KEYCLOAK_URL": "http://kc", "KEYCLOAK_CLIENT_SECRET": SECRET})
+
+    with pytest.raises(ServiceAuthError) as exc_info:
+        ServiceAuth.from_config(config)
+
+    message = str(exc_info.value)
+    assert "KEYCLOAK_REALM" in message
+    assert "KEYCLOAK_CLIENT_ID" in message
+    assert SECRET not in message
+
+
 def test_from_config_builds_client():
     config = FakeConfig(
         {

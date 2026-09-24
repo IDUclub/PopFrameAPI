@@ -19,6 +19,14 @@ class ServiceAuthError(RuntimeError):
     pass
 
 
+def _get_optional(config: Config, key: str) -> str | None:
+    # iduconfig raises ValueError on empty/missing keys; collect them all instead of failing on the first one
+    try:
+        return config.get(key)
+    except ValueError:
+        return None
+
+
 class ServiceAuth:
     """
     Machine-to-machine auth against Keycloak (client credentials flow).
@@ -30,7 +38,7 @@ class ServiceAuth:
 
     @classmethod
     def from_config(cls, config: Config) -> "ServiceAuth":
-        values = {key: config.get(key) for key in KEYCLOAK_CONFIG_KEYS}
+        values = {key: _get_optional(config, key) for key in KEYCLOAK_CONFIG_KEYS}
         missing = [key for key, value in values.items() if not value]
         if missing:
             raise ServiceAuthError(
