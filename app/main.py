@@ -24,14 +24,16 @@ from .broker.broker_service import BrokerService
 from .common.exceptions.http_exception_wrapper import http_exception
 from .common.middlewares.exception_handler import ExceptionHandlerMiddleware
 from .common.middlewares.prometheus_handler import ObservabilityMiddleware
-from .dependencies import config, pop_frame_model_service
+from .dependencies import config, pop_frame_model_service, service_auth
 from .observability import OpenTelemetryAgent, PrometheusConfig
 from .observability.metrics import setup_metrics
 
 consumer_settings = KafkaConsumerSettings.from_env()
 
 broker_client = KafkaConsumerService(consumer_settings)
-broker_service = BrokerService(config, broker_client, pop_frame_model_service)
+broker_service = BrokerService(
+    config, broker_client, pop_frame_model_service, service_auth
+)
 metrics = setup_metrics()
 
 
@@ -47,6 +49,7 @@ async def lifespan(app: FastAPI):
     await broker_service.register_and_start()
     yield
     await broker_service.stop()
+    await service_auth.aclose()
     otel_agent.shutdown()
 
 
