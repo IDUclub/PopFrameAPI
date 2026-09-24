@@ -15,10 +15,36 @@ jobs:
         run: echo "NOW=$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
       - name: checkout
         uses: actions/checkout@v4
-      - name: copy_env
+      - name: Write env file
         env:
-          ENV_PATH: ${{secrets.ENV_PATH}}
-        run: cp "$ENV_PATH"/.env.production ./
+          # Settings -> Secrets and variables -> Actions
+          #   Variables tab -> ENV_APP   (app params)
+          #   Variables tab -> ENV_URLS  (service addresses)
+          #   Secrets tab   -> ENV_SECRET (credentials)
+          # Keys: see .env.example
+          ENV_APP: ${{ vars.ENV_APP }}
+          ENV_URLS: ${{ vars.ENV_URLS }}
+          ENV_SECRET: ${{ secrets.ENV_SECRET }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}   # legacy fallback
+          ENV_PATH: ${{ secrets.ENV_PATH }}   # legacy fallback
+        run: |
+          if [ -n "$ENV_APP" ] || [ -n "$ENV_URLS" ] || [ -n "$ENV_SECRET" ]; then
+            : > .env.production
+            [ -n "$ENV_APP" ] && printf '%s\n' "$ENV_APP" >> .env.production
+            [ -n "$ENV_URLS" ] && printf '%s\n' "$ENV_URLS" >> .env.production
+            [ -n "$ENV_SECRET" ] && printf '%s\n' "$ENV_SECRET" >> .env.production
+            echo "Wrote .env.production from ENV_APP + ENV_URLS (vars) + ENV_SECRET (secret) ($(wc -l < .env.production) lines)"
+          elif [ -n "$ENV_FILE" ]; then
+            printf '%s\n' "$ENV_FILE" > .env.production
+            echo "Wrote .env.production from ENV_FILE secret ($(wc -l < .env.production) lines)"
+          elif [ -n "$ENV_PATH" ]; then
+            cp "$ENV_PATH/.env.production" ./
+            echo "Copied .env.production from ENV_PATH (fallback)"
+          else
+            # iduconfig refuses to start without .env.production, so fail the build here
+            echo "::error::No ENV_APP/ENV_URLS/ENV_SECRET, ENV_FILE or ENV_PATH - .env.production not provided"
+            exit 1
+          fi
       - name: build
         env:
           NOW: ${{steps.date.outputs.now}}
