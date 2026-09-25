@@ -40,17 +40,11 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
         logger.info("Started processing event {}", repr(event))
         model = await self.pop_frame_model_service.get_model(event.territory_id)
         try:
-            # token is requested before each step: the calculations are long
-            # and a token taken once may expire before the second step's writes
             await process_population_criterion(
-                model,
-                event.base_scenario_id,
-                await self.service_auth.get_token(),
+                model, event.base_scenario_id, self.service_auth.get_headers
             )
             await process_evaluation(
-                model,
-                event.base_scenario_id,
-                await self.service_auth.get_token(),
+                model, event.base_scenario_id, self.service_auth.get_headers
             )
         except HTTPException as http_e:
             if http_e.status_code == 404:

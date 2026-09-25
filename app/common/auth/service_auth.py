@@ -1,5 +1,6 @@
-from typing import Awaitable, Callable, TypeVar
+from typing import Awaitable, Callable, Protocol, TypeVar
 
+import requests
 from fastapi import HTTPException
 from idu_service_auth import KeycloakAuthError, KeycloakTokenClient, KeycloakTokenConfig
 from iduconfig import Config
@@ -17,6 +18,31 @@ T = TypeVar("T")
 
 class ServiceAuthError(RuntimeError):
     pass
+
+
+class AuthHeadersProvider(Protocol):
+    async def __call__(self, *, force_refresh: bool = False) -> dict[str, str]: ...
+
+
+def static_bearer_headers(token: str) -> AuthHeadersProvider:
+    """Headers provider for a fixed token that cannot be refreshed, e.g. a user's token."""
+
+    async def provide(*, force_refresh: bool = False) -> dict[str, str]:
+        return {"Authorization": f"Bearer {token}"}
+
+    return provide
+
+
+async def send_with_fresh_headers(
+    send: Callable[[dict[str, str]], requests.Response],
+    auth_headers: AuthHeadersProvider,
+) -> requests.Response:
+    """Sends a request with headers obtained right before it, refreshing them once on 401."""
+    response = send(await auth_headers())
+    if response.status_code != 401:
+        return response
+    logger.warning("Urban API rejected token, refreshing")
+    return send(await auth_headers(force_refresh=True))
 
 
 def _get_optional(config: Config, key: str) -> str | None:

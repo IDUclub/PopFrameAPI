@@ -8,6 +8,11 @@ from popframe.method.territory_evaluation import TerritoryEvaluation
 from pydantic_geojson import PolygonModel
 
 from app.common.auth.bearer import verify_bearer_token
+from app.common.auth.service_auth import (
+    AuthHeadersProvider,
+    send_with_fresh_headers,
+    static_bearer_headers,
+)
 from app.common.models.popframe_models.popframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
@@ -54,13 +59,15 @@ async def evaluate_territory_location_endpoint(
 
 
 async def process_evaluation(
-    popframe_region_model: PopFrameAPIModel, project_scenario_id: int, token: str
+    popframe_region_model: PopFrameAPIModel,
+    project_scenario_id: int,
+    auth_headers: AuthHeadersProvider,
 ):
     try:
         # Getting project_id and additional information based on scenario_id
         scenario_response = requests.get(
             f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=await auth_headers(),
         )
         if scenario_response.status_code != 200:
             raise Exception("Error retrieving scenario information")
@@ -73,7 +80,7 @@ async def process_evaluation(
         # Retrieving territory geometry
         territory_response = requests.get(
             f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=await auth_headers(),
         )
         if territory_response.status_code != 200:
             raise Exception("Error retrieving territory geometry")
@@ -124,10 +131,13 @@ async def process_evaluation(
                 "properties": {},
             }
 
-            indicators_response = requests.put(
-                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
-                headers={"Authorization": f"Bearer {token}"},
-                json=indicator_data,
+            indicators_response = await send_with_fresh_headers(
+                lambda headers: requests.put(
+                    f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
+                    headers=headers,
+                    json=indicator_data,
+                ),
+                auth_headers,
             )
             if indicators_response.status_code not in (200, 201):
                 logger.exception(
@@ -152,7 +162,10 @@ async def save_evaluate_location_endpoint(
 ):
     # Добавляем фоновую задачу
     background_tasks.add_task(
-        process_evaluation, popframe_region_model, project_scenario_id, token
+        process_evaluation,
+        popframe_region_model,
+        project_scenario_id,
+        static_bearer_headers(token),
     )
 
     return {

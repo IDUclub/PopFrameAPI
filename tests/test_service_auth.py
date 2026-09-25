@@ -5,7 +5,12 @@ import pytest
 from fastapi import HTTPException
 from idu_service_auth import TokenRequestError
 
-from app.common.auth.service_auth import ServiceAuth, ServiceAuthError
+from app.common.auth.service_auth import (
+    ServiceAuth,
+    ServiceAuthError,
+    send_with_fresh_headers,
+    static_bearer_headers,
+)
 from app.common.models.popframe_models.services.popframe_models_api_service import (
     PopFrameModelApiService,
 )
@@ -161,3 +166,63 @@ async def test_put_as_service_does_not_retry_other_errors():
 
     assert exc_info.value.status_code == 500
     put.assert_awaited_once()
+
+
+def _response(status_code: int) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    return response
+
+
+@pytest.mark.asyncio
+async def test_send_with_fresh_headers_takes_token_at_send_time():
+    auth = _service_auth("token-before-calculation", "token-at-put")
+    await auth.get_headers()
+    sent_headers = []
+
+    await send_with_fresh_headers(
+        lambda headers: sent_headers.append(headers) or _response(200),
+        auth.get_headers,
+    )
+
+    assert sent_headers == [{"Authorization": "Bearer token-at-put"}]
+
+
+@pytest.mark.asyncio
+async def test_send_with_fresh_headers_refreshes_service_token_once_on_401():
+    auth = _service_auth("stale-token", "fresh-token")
+    responses = [_response(401), _response(200)]
+    sent_headers = []
+
+    def send(headers):
+        sent_headers.append(headers["Authorization"])
+        return responses.pop(0)
+
+    response = await send_with_fresh_headers(send, auth.get_headers)
+
+    assert response.status_code == 200
+    assert sent_headers == ["Bearer stale-token", "Bearer fresh-token"]
+    assert auth._client.get_access_token.await_args_list[1].kwargs == {
+        "force_refresh": True
+    }
+
+
+@pytest.mark.asyncio
+async def test_send_with_fresh_headers_does_not_retry_other_errors():
+    auth = _service_auth("service-token")
+    send = MagicMock(return_value=_response(500))
+
+    response = await send_with_fresh_headers(send, auth.get_headers)
+
+    assert response.status_code == 500
+    send.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_static_bearer_headers_returns_user_token():
+    auth_headers = static_bearer_headers("user-token")
+
+    assert await auth_headers() == {"Authorization": "Bearer user-token"}
+    assert await auth_headers(force_refresh=True) == {
+        "Authorization": "Bearer user-token"
+    }
