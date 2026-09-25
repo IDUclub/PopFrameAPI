@@ -9,3 +9,5 @@ services:
     ports:
       - "80:80"
       - "9464:9464"
+    volumes:
+      - ./.env.production:/app/.env.production:ro

@@ -45,6 +45,17 @@ jobs:
             echo "::error::No ENV_APP/ENV_URLS/ENV_SECRET, ENV_FILE or ENV_PATH - .env.production not provided"
             exit 1
           fi
+      - name: Check required env keys
+        run: |
+          missing=""
+          for key in KEYCLOAK_URL KEYCLOAK_REALM KEYCLOAK_CLIENT_ID KEYCLOAK_CLIENT_SECRET; do
+            grep -Eq "^${key}=[^[:space:]]" .env.production || missing="$missing $key"
+          done
+          if [ -n "$missing" ]; then
+            # the app fails on startup without these; stop before the running container is removed
+            echo "::error::.env.production is missing required keys:$missing"
+            exit 1
+          fi
       - name: build
         env:
           NOW: ${{steps.date.outputs.now}}

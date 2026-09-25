@@ -11,3 +11,5 @@ services:
       - "80:80"
       - "5678:5678"
       - "9464:9464"
+    volumes:
+      - ./.env.production:/app/.env.production:ro

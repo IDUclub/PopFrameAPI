@@ -8,6 +8,7 @@ services:
     env_file:
       - .env.production
     volumes:
+      - ./.env.production:/app/.env.production:ro
       - /var/essdata/popframe_cache:/app/__cache__
     restart: always
 
