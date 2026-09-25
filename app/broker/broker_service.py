@@ -1,6 +1,7 @@
 from iduconfig import Config
 from otteroad import KafkaConsumerService, KafkaProducerClient
 
+from app.common.auth.service_auth import ServiceAuth
 from app.common.models.popframe_models.popframe_models_service import (
     PopFrameModelsService,
 )
@@ -16,18 +17,22 @@ class BrokerService:
         config: Config,
         broker_client: KafkaConsumerService,
         pop_frame_model_service: PopFrameModelsService,
+        service_auth: ServiceAuth,
     ):
 
         self.config = config
         self.broker_client = broker_client
         self.pop_frame_model_service = pop_frame_model_service
+        self.service_auth = service_auth
 
     async def register_and_start(self):
 
         producer = ProducerWrapper()
 
         self.broker_client.register_handler(
-            ProjectHandler(self.config, self.pop_frame_model_service)
+            ProjectHandler(
+                self.config, self.pop_frame_model_service, self.service_auth
+            )
         )
         self.broker_client.register_handler(
             RegionScenarioHandler(

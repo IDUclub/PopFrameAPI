@@ -13,6 +13,7 @@ from loguru import logger
 from shapely.geometry import shape
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.auth.service_auth import ServiceAuth
 from app.common.exceptions.http_exception_wrapper import http_exception
 
 
@@ -24,13 +25,24 @@ class PopFrameModelApiService:
         config: Config,
         transportframe_api_handler: APIHandler,
         urban_api_handler: APIHandler,
+        service_auth: ServiceAuth,
         max_extraction_per_request: int = 20,
     ):
 
         self.transportframe_api_handler = transportframe_api_handler
         self.urban_api_handler = urban_api_handler
+        self.service_auth = service_auth
         self.max_extractions_per_request = max_extraction_per_request
         self.config = config
+
+    async def _put_as_service(self, endpoint_url: str, data: dict) -> dict | list:
+        """PUT to Urban API with Keycloak service token, refreshing it once on 401."""
+
+        return await self.service_auth.call_with_headers(
+            lambda headers: self.urban_api_handler.put(
+                endpoint_url=endpoint_url, headers=headers, data=data
+            )
+        )
 
     async def get_base_regional_scenario_by_territory(self, territory_id: int) -> int:
         """
@@ -336,7 +348,7 @@ class PopFrameModelApiService:
         try:
             for i in indicators_series.index:
                 if map_dict.get(i):
-                    await self.urban_api_handler.put(
+                    await self._put_as_service(
                         endpoint_url=f"/api/v1/scenarios/{regional_scenario_id}/indicator_value",
                         data={
                             "indicator_id": map_dict[i]["indicator_id"],
@@ -370,7 +382,7 @@ class PopFrameModelApiService:
         """
 
         task_list = [
-            self.urban_api_handler.put(
+            self._put_as_service(
                 f"/api/v1/scenarios/{regional_scenario_id}/indicators_values",
                 data={
                     "indicator_id": 197,
@@ -382,7 +394,6 @@ class PopFrameModelApiService:
                     "information_source": "modeled/PopFrame",
                     "properties": {},
                 },
-                headers={"Authorization": f"Bearer {self.config.get('ACCESS_TOKEN')}"},
             )
             for i in hexagons_indicators.index
         ]

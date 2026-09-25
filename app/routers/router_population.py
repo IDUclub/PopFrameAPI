@@ -7,6 +7,11 @@ from popframe.method.city_evaluation import CityPopulationScorer
 from popframe.method.territory_evaluation import TerritoryEvaluation
 
 from app.common.auth.bearer import verify_bearer_token
+from app.common.auth.service_auth import (
+    AuthHeadersProvider,
+    send_with_fresh_headers,
+    static_bearer_headers,
+)
 from app.common.models.popframe_models.popframe_dtype.popframe_api_model import (
     PopFrameAPIModel,
 )
@@ -54,12 +59,14 @@ async def get_population_criterion_score_endpoint(
 
 
 async def process_population_criterion(
-    popframe_region_model: PopFrameAPIModel, project_scenario_id: int, token: str
+    popframe_region_model: PopFrameAPIModel,
+    project_scenario_id: int,
+    auth_headers: AuthHeadersProvider,
 ):
 
     scenario_response = requests.get(
         f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=await auth_headers(),
     )
     if scenario_response.status_code != 200:
         if scenario_response.status_code == 404:
@@ -76,7 +83,7 @@ async def process_population_criterion(
 
     territory_response = requests.get(
         f"{config.get('URBAN_API')}/api/v1/projects/{project_id}/territory",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=await auth_headers(),
     )
     if territory_response.status_code != 200:
         raise Exception("Ошибка при получении геометрии территории")
@@ -106,10 +113,13 @@ async def process_population_criterion(
             "information_source": "modeled PopFrame",
         }
 
-        indicators_response = requests.put(
-            f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
-            headers={"Authorization": f"Bearer {token}"},
-            json=indicator_data,
+        indicators_response = await send_with_fresh_headers(
+            lambda headers: requests.put(
+                f"{config.get('URBAN_API')}/api/v1/scenarios/{project_scenario_id}/indicators_values",
+                headers=headers,
+                json=indicator_data,
+            ),
+            auth_headers,
         )
         if indicators_response.status_code not in (200, 201):
             logger.exception(
@@ -132,7 +142,10 @@ async def save_population_criterion_endpoint(
 ):
 
     background_tasks.add_task(
-        process_population_criterion, popframe_region_model, project_scenario_id, token
+        process_population_criterion,
+        popframe_region_model,
+        project_scenario_id,
+        static_bearer_headers(token),
     )
 
     return {

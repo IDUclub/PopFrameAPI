@@ -3,6 +3,7 @@ from pathlib import Path
 from iduconfig import Config
 
 from app.common.api_handler.api_handler import APIHandler
+from app.common.auth.service_auth import ServiceAuth
 from app.common.checkers.territory_checker import TerritoryChecker
 from app.common.exceptions.http_exception_wrapper import http_exception
 from app.common.gateways.urban_api_gateway import UrbanAPIGateway
@@ -21,6 +22,7 @@ from app.common.towns.towns_layers import TownsLayers
 
 init_logger()
 config = Config()
+service_auth = ServiceAuth.from_config(config)
 
 urban_api_handler = APIHandler(config.get("URBAN_API"))
 transportframe_api_handler = APIHandler(config.get("TRANSPORTFRAME_API"))
@@ -46,7 +48,7 @@ geoserver_storage = GeoserverStorage(
 )
 
 pop_frame_model_api_service = PopFrameModelApiService(
-    config, transportframe_api_handler, urban_api_handler
+    config, transportframe_api_handler, urban_api_handler, service_auth
 )
 pop_frame_caching_service = PopFrameCachingService(
     (

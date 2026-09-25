@@ -11,3 +11,6 @@ build.sh
 venv/
 .venv/
 .__cache__/
+.env
+.env.*
+!.env.example

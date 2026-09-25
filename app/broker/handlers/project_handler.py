@@ -4,6 +4,7 @@ from loguru import logger
 from otteroad.consumer import BaseMessageHandler
 from otteroad.models import ProjectCreated
 
+from app.common.auth.service_auth import ServiceAuth
 from app.common.models.popframe_models.popframe_models_service import (
     PopFrameModelsService,
 )
@@ -17,11 +18,13 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
         self,
         config: Config,
         pop_frame_model_service: PopFrameModelsService,
+        service_auth: ServiceAuth,
     ):
 
         super().__init__()
         self.config = config
         self.pop_frame_model_service = pop_frame_model_service
+        self.service_auth = service_auth
 
     # TODO revise ctx
     async def handle(self, event: ProjectCreated, ctx):
@@ -38,14 +41,10 @@ class ProjectHandler(BaseMessageHandler[ProjectCreated]):
         model = await self.pop_frame_model_service.get_model(event.territory_id)
         try:
             await process_population_criterion(
-                model,
-                event.base_scenario_id,
-                self.config.get("URBAN_API_ACCESS_TOKEN"),
+                model, event.base_scenario_id, self.service_auth.get_headers
             )
             await process_evaluation(
-                model,
-                event.base_scenario_id,
-                self.config.get("URBAN_API_ACCESS_TOKEN"),
+                model, event.base_scenario_id, self.service_auth.get_headers
             )
         except HTTPException as http_e:
             if http_e.status_code == 404:
